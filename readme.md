@@ -1,4 +1,4 @@
-## write to _html/tmp.html:
+## to run:
 
   `./scrape.py --outfname _html/weather.html`
 
