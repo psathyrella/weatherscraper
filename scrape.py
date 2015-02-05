@@ -52,3 +52,4 @@ with open(args.outfname, 'w') as outfile:
     outfile.write('retreived: ' + str(datetime.datetime.now()) + '\n')
     outfile.write(htmlinfo.headtext)
     outfile.write(htmlcode)
+    outfile.write('<br><br><a href=\"https://github.com/psathyrella/weatherscraper\">https://github.com/psathyrella/weatherscraper</a>\n')
