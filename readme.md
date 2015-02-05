@@ -1,6 +1,6 @@
 ## write to _html/tmp.html:
 
-  `./scrape.py`
+  `./scrape.py --outfname _html/weather.html`
 
 ## links:
 snow depth:

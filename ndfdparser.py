@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from subprocess import check_call
 from xml.etree import ElementTree as ET
 import csv
-import HTML
 
 weekdays = ('Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun')
 # locations = {}
@@ -93,7 +92,7 @@ def combine_days(action, pdata, debug=False):
         else:
             increment_day(istart, iend, ival)
 
-    print 'NOTE need to update to detail with monthly and yearly rollover'
+    print 'NOTE need to update to deal with monthly and yearly rollover'
     for ival in range(len(pdata['values'])):
         start = pdata['time-layout']['start'][ival]
         if len(pdata['time-layout']['end']) > 0:  # some of them only have start times
@@ -219,7 +218,7 @@ def find_icon_for_time(day, hour, icondata):
     # print '  using %s at day %d hour %d' % (closest_icon_url, clday, closest_hour)
     return closest_icon_url  # can be None
 
-def prettify_values(data, ndays=5, debug=False, htmldir='_html'):
+def prettify_values(data, htmldir, ndays=5, debug=False):
     mintemps = data['Daily Minimum Temperature']
     maxtemps = data['Daily Maximum Temperature']
     liquid = combine_days('sum', data['Liquid Precipitation Amount'])
@@ -238,10 +237,15 @@ def prettify_values(data, ndays=5, debug=False, htmldir='_html'):
         tmax = find_max_temp(maxtemps, day.day)
         tmin = find_min_temp(mintemps, day.day, day.day+1)
         icon_url = find_icon_for_time(day.day, 12, data['Conditions Icons'])  # find icon for noon this day
-        icon_file = os.path.basename(icon_url)
-        if not os.path.exists(htmldir + '/images/' + icon_file):
-            print 'downloading %s' % icon_url
-            check_call(['wget', '-q', '-O', htmldir + '/images/' + icon_file, icon_url])
+        if icon_url is not None:
+            icon_file = os.path.basename(icon_url)
+            if not os.path.exists(htmldir + '/images'):
+                os.makedirs(htmldir + '/images')
+            if not os.path.exists(htmldir + '/images/' + icon_file):
+                print 'downloading %s' % icon_url
+                check_call(['wget', '-q', '-O', htmldir + '/images/' + icon_file, icon_url])
+        else:
+            icon_file = 'missing.jpg'
 
         row = ''
         if tmax is not None:
@@ -320,21 +324,20 @@ def prettify_values(data, ndays=5, debug=False, htmldir='_html'):
 
     return tv, rowlist
 
-def forecast(tree, header=False):
+def forecast(tree, htmldir='_html'):
     root = tree.getroot()
     time_layouts = get_time_layouts(root)
     data = parse_data(root, time_layouts)
     point = root.find('data').find('location').find('point')
     lat, lon = point.get('latitude'), point.get('longitude')
-    tv, rowlist = prettify_values(data, debug=True)
+    tv, rowlist = prettify_values(data, htmldir, debug=True)
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
     rowlist.insert(0, '<a href="' + point_forecast_url + '">LOCATION</a>')
-    table_vals = [rowlist,]
-    if header:
-        htmlcode = HTML.table(table_vals, header_row=['',] + tv['days'], col_width=['15%' for _ in range(len(table_vals[0]))])
-    else:
-        htmlcode = HTML.table(table_vals, col_width=['15%' for _ in range(len(table_vals[0]))])
-    return htmlcode
-    # with open('_html/tmp.html', 'w') as outfile:
-    #     outfile.write(htmlcode)
 
+    return tv['days'], rowlist
+
+    # table_vals = [rowlist,]
+    # if header:
+    #     htmlcode = HTML.table(table_vals, header_row=['',] + tv['days'], col_width=['15%' for _ in range(len(table_vals[0]))])
+    # else:
+    #     htmlcode = HTML.table(table_vals, col_width=['15%' for _ in range(len(table_vals[0]))])

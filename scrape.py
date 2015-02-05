@@ -6,11 +6,13 @@ import datetime
 from xml.etree import ElementTree as ET
 import urllib
 
+import HTML
 import ndfdparser
 import htmlinfo
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--location-fname', default='all-locations.csv')
+parser.add_argument('--outfname', required=True)
 args = parser.parse_args()
 
 # ----------------------------------------------------------------------------------------
@@ -29,22 +31,24 @@ def get_forecast(args, lat, lon, start_date=datetime.date.today(), num_days=6, m
     url = "?".join([FORECAST_BY_DAY_URL, query_string])
     resp = urllib.urlopen(url)
     tree = ET.parse(resp)
-    forecast = ndfdparser.forecast(tree)
+    forecast = ndfdparser.forecast(tree, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
 
 # ----------------------------------------------------------------------------------------
-htmlcode = ''
+rows = []
 with open(args.location_fname) as location_file:
     reader = csv.DictReader(location_file)
     for line in reader:
         print '\n%s:' % line['name']
         args.location = ()
-        forecast = get_forecast(args, line['lat'], line['lon'])
-        htmlcode += forecast.replace('LOCATION</a>', line['name'] + '</a><br>' + line['elevation'])
+        days, forecast = get_forecast(args, line['lat'], line['lon'])
+        forecast[0] = forecast[0].replace('LOCATION</a>', line['name'] + '</a><br>' + line['elevation'] + ' ft')
+        rows.append(forecast)
 
+htmlcode = HTML.table(rows, header_row=['location<br>(forecast elevation)',] + days)
 if not os.path.exists:
     os.makedirs('_html')
-with open('_html/tmp.html', 'w') as outfile:
-    outfile.write(str(datetime.datetime.now()) + '\n')
+with open(args.outfname, 'w') as outfile:
+    outfile.write('retreived: ' + str(datetime.datetime.now()) + '\n')
     outfile.write(htmlinfo.headtext)
     outfile.write(htmlcode)
