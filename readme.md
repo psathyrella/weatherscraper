@@ -2,6 +2,10 @@
 
   `./scrape.py --outfname _html/weather.html`
 
+## current forecast
+
+http://htmlpreview.github.io/?https://github.com/psathyrella/weatherscraper/blob/current-forecast/_html/weather.html
+
 ## links:
 snow depth:
 http://www.nohrsc.noaa.gov/nsa/reports.html?region=Northwest&var=snowdepth&dy=2014&dm=12&dd=24&units=e&sort=value&filter=0
