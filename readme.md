@@ -1,10 +1,16 @@
-## to run:
+## weather for the mountains
+
+Pull the forecasts from NDFD and write an html summary file:
 
   `./scrape.py --outfname _html/weather.html`
 
-## current forecast
+To add a location, edit `all-locations.csv`.
 
-http://htmlpreview.github.io/?https://github.com/psathyrella/weatherscraper/blob/current-forecast/_html/weather.html
+The current forecast should be displayed [here](http://htmlpreview.github.io/?https://github.com/psathyrella/weatherscraper/blob/current-forecast/_html/weather.html).
+
+## credit
+
+This is pretty much just [lost in the mountains](http://lost-in-the-mountains.com/washington_climbing.php), but with temperature, wind, and precipitation.
 
 ## links:
 snow depth:
