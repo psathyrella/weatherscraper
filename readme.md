@@ -8,6 +8,8 @@ To add a location, edit `all-locations.csv`.
 
 The current forecast should be displayed [here](http://htmlpreview.github.io/?https://github.com/psathyrella/weatherscraper/blob/current-forecast/_html/weather.html).
 
+...dammit but it isn't. Hm... not refreshing properly.
+
 ## credit
 
 This is pretty much just [lost in the mountains](http://lost-in-the-mountains.com/washington_climbing.php), but with temperature, wind, and precipitation.
