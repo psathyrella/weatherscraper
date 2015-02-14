@@ -7,13 +7,8 @@ from xml.etree import ElementTree as ET
 import csv
 
 weekdays = ('Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun')
-# locations = {}
-# with open('lost-locations.csv') as locfile:
-#     reader = csv.DictReader(locfile)
-#     for line in reader:
-#         locations[line['name']] = (line['lat'], line['lon'])
 
-
+# ----------------------------------------------------------------------------------------
 def parse_noaa_time_string(noaa_time_str):
     date_str, time_str = noaa_time_str.split('T')  # will raise ValueError if it doesn't split into two pieces
     tzhackdelta = None
@@ -30,6 +25,7 @@ def parse_noaa_time_string(noaa_time_str):
         moment += tzhackdelta
     return moment
 
+# ----------------------------------------------------------------------------------------
 def get_time_layouts(root):
     layouts = {}
     for lout in root.find('data').findall('time-layout'):
@@ -41,6 +37,7 @@ def get_time_layouts(root):
                 layouts[name][start_end].append(moment)
     return layouts
 
+# ----------------------------------------------------------------------------------------
 def combine_days(action, pdata, debug=False):
     """ 
     Perform <action> for all the values within each day, where <action> is either sum or mean.
@@ -49,6 +46,7 @@ def combine_days(action, pdata, debug=False):
 
     starts, ends, values, weight_sum = [], [], [], []
 
+    # ----------------------------------------------------------------------------------------
     def get_time_delta_in_hours(start, end):
         """ NOTE assumes no overflows or wraps or nothing """
         dhour = end.hour - start.hour
@@ -56,7 +54,8 @@ def combine_days(action, pdata, debug=False):
         dsec = end.second - start.second
         dtime = timedelta(hours=dhour, minutes=dmin, seconds=dsec)  # NOTE rounds to nearest second
         # print start, end, dtime
-        return float(dtime.seconds) / (60*60)
+        return float(dtime.seconds) / (60.*60.)
+    # ----------------------------------------------------------------------------------------
     def add_new_day(dstart, dend, dval):
         weight = '-'
         starts.append(dstart)
@@ -71,6 +70,7 @@ def combine_days(action, pdata, debug=False):
             raise Exception('invalid action'+action)
         if debug:
             print '    new day', dstart, dend, weight, dval
+    # ----------------------------------------------------------------------------------------
     def increment_day(dstart, dend, dval):
         ends[-1] = dend
         weight = '-'
@@ -84,6 +84,7 @@ def combine_days(action, pdata, debug=False):
             raise Exception('invalid action'+action)
         if debug:
             print '    increment', starts[-1], dend, weight, dval, '   ', values[-1]
+    # ----------------------------------------------------------------------------------------
     def incorporate_value(istart, iend, ival):
         # if debug:
         #     print '    incorporate', istart, iend, ival
@@ -92,7 +93,6 @@ def combine_days(action, pdata, debug=False):
         else:
             increment_day(istart, iend, ival)
 
-    print 'NOTE need to update to deal with monthly and yearly rollover'
     for ival in range(len(pdata['values'])):
         start = pdata['time-layout']['start'][ival]
         if len(pdata['time-layout']['end']) > 0:  # some of them only have start times
@@ -147,6 +147,7 @@ def combine_days(action, pdata, debug=False):
             print '    ', key, dailyvals[key]
     return dailyvals
 
+# ----------------------------------------------------------------------------------------
 def parse_data(root, time_layouts, debug=False):
     pars = root.find('data').find('parameters')
     data = {}
@@ -181,6 +182,7 @@ def parse_data(root, time_layouts, debug=False):
 
     return data
 
+# ----------------------------------------------------------------------------------------
 def find_min_temp(pdata, prev_day, next_day):
     """ find min temp for the night of <prev_day> to <next_day> """
     for ival in range(len(pdata['values'])):
@@ -191,6 +193,7 @@ def find_min_temp(pdata, prev_day, next_day):
     # raise Exception('ERROR didn\'t find min temp for night of %d-%d in %s' % (prev_day, next_day, pdata['time-layout']))
     return None
 
+# ----------------------------------------------------------------------------------------
 def find_max_temp(pdata, day):
     """ find min temp for the night of <prev_day> to <next_day> """
     for ival in range(len(pdata['values'])):
@@ -201,6 +204,7 @@ def find_max_temp(pdata, day):
     # raise Exception('ERROR didn\'t find max temp for %d in %s' % (day, pdata['time-layout']))
     return None
 
+# ----------------------------------------------------------------------------------------
 def find_icon_for_time(day, hour, icondata):
     # print 'look: %d %d' % (day, hour)
     closest_icon_url = None  # url corresponding to nearest time
@@ -218,9 +222,8 @@ def find_icon_for_time(day, hour, icondata):
     # print '  using %s at day %d hour %d' % (closest_icon_url, clday, closest_hour)
     return closest_icon_url  # can be None
 
-def prettify_values(data, htmldir, ndays=5, debug=False):
-    mintemps = data['Daily Minimum Temperature']
-    maxtemps = data['Daily Maximum Temperature']
+# ----------------------------------------------------------------------------------------
+def get_html(data, htmldir, ndays=5, debug=False):
     liquid = combine_days('sum', data['Liquid Precipitation Amount'])
     snow = combine_days('sum', data['Snow Amount'])
     wind_speed = combine_days('mean', data['Wind Speed'])
@@ -234,8 +237,8 @@ def prettify_values(data, htmldir, ndays=5, debug=False):
     for iday in range(ndays):
         day = datetime.now() + timedelta(days=iday)
     
-        tmax = find_max_temp(maxtemps, day.day)
-        tmin = find_min_temp(mintemps, day.day, day.day+1)
+        tmax = find_max_temp(data['Daily Maximum Temperature'], day.day)
+        tmin = find_min_temp(data['Daily Minimum Temperature'], day.day, (day + timedelta(days=1)).day)
         icon_url = find_icon_for_time(day.day, 12, data['Conditions Icons'])  # find icon for noon this day
         if icon_url is not None:
             icon_file = os.path.basename(icon_url)
@@ -324,20 +327,15 @@ def prettify_values(data, htmldir, ndays=5, debug=False):
 
     return tv, rowlist
 
-def forecast(tree, htmldir='_html'):
+# ----------------------------------------------------------------------------------------
+def forecast(tree, htmldir):
     root = tree.getroot()
     time_layouts = get_time_layouts(root)
     data = parse_data(root, time_layouts)
     point = root.find('data').find('location').find('point')
     lat, lon = point.get('latitude'), point.get('longitude')
-    tv, rowlist = prettify_values(data, htmldir, debug=True)
+    tv, rowlist = get_html(data, htmldir, debug=True)
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
     rowlist.insert(0, '<a href="' + point_forecast_url + '">LOCATION</a>')
 
     return tv['days'], rowlist
-
-    # table_vals = [rowlist,]
-    # if header:
-    #     htmlcode = HTML.table(table_vals, header_row=['',] + tv['days'], col_width=['15%' for _ in range(len(table_vals[0]))])
-    # else:
-    #     htmlcode = HTML.table(table_vals, col_width=['15%' for _ in range(len(table_vals[0]))])

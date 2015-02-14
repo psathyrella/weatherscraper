@@ -35,6 +35,7 @@ def get_forecast(args, lat, lon, start_date=datetime.date.today(), num_days=6, m
     return forecast
 
 # ----------------------------------------------------------------------------------------
+# get forecast for each location
 rows = []
 with open(args.location_fname) as location_file:
     reader = csv.DictReader(location_file)
@@ -45,11 +46,12 @@ with open(args.location_fname) as location_file:
         forecast[0] = forecast[0].replace('LOCATION</a>', line['name'] + '</a><br>' + line['elevation'] + ' ft')
         rows.append(forecast)
 
+# write html output
 htmlcode = HTML.table(rows, header_row=['location<br>(forecast elevation)',] + days)
 if not os.path.exists:
     os.makedirs('_html')
 with open(args.outfname, 'w') as outfile:
-    outfile.write('retreived: ' + str(datetime.datetime.now()) + '\n')
+    outfile.write('retreived %s\n' % datetime.datetime.now().strftime('%B %d %Y at %H:%M'))
     outfile.write(htmlinfo.headtext)
     outfile.write(htmlcode)
-    outfile.write('<br><br><a href=\"https://github.com/psathyrella/weatherscraper\">https://github.com/psathyrella/weatherscraper</a>\n')
+    outfile.write('<br><br><a href=\"https://github.com/psathyrella/weatherscraper\">github</a>\n')
