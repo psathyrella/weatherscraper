@@ -1,12 +1,12 @@
 ## weather for the mountains
 
-Pull the forecasts from NDFD and write an html summary file:
+To pull forecasts from NDFD and write the information to an html file:
 
-  `./scrape.py --outfname _html/weather.html`
+    ./scrape.py --outfname _html/weather.html
 
-To add a location, edit `all-locations.csv`.
+To add or remove locations, edit `all-locations.csv`.
 
-The current forecast is [here](http://psathyrella.github.io/weatherscraper/weather.html).
+Or, just look at the current forecast [here](http://psathyrella.github.io/weatherscraper/weather.html).
 
 ## inspiration
 
