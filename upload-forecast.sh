@@ -1,8 +1,7 @@
 #!/bin/bash
 
-git checkout current-forecast
-./scrape.py --outfname _html/weather.html
-git add _html/
+./scrape.py --outfname psathyrella.github.io/weatherscraper/weather.html
+cd psathyrella.github.io
+git add weatherscraper/
 git commit -m "forecast for `date`"
-git push origin current-forecast
-git checkout master
+git push origin master
