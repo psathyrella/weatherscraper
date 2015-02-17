@@ -38,7 +38,7 @@ def get_forecast(args, lat, lon, start_date=datetime.date.today(), num_days=6, m
 # get forecast for each location
 rows = []
 with open(args.location_fname) as location_file:
-    reader = csv.DictReader(location_file)
+    reader = csv.DictReader(filter(lambda row: row[0]!='#', location_file))
     for line in reader:
         print '\n%s:' % line['name']
         args.location = ()
@@ -54,4 +54,10 @@ with open(args.outfname, 'w') as outfile:
     outfile.write('retreived %s\n' % datetime.datetime.now().strftime('%B %d %Y at %H:%M'))
     outfile.write(htmlinfo.headtext)
     outfile.write(htmlcode)
+
+    sundries = []
+    sundries.append(['<a href="http://www.mountain-forecast.com/peaks/Mount-Waddington/forecasts/3500">Mt Waddington</a>', ])
+    sundries.append(['<a href="http://weather.gc.ca/city/pages/bc-50_metric_e.html">Squamish</a>', ])
+    outfile.write(HTML.table(sundries, header_row=['<b>sundries</b><br>', ]))
     outfile.write('<br><br><a href=\"https://github.com/psathyrella/weatherscraper\">github</a>\n')
+    
