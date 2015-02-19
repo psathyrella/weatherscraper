@@ -12,4 +12,4 @@ Weatherscraper is free software under the GPL v3.
 
 ## inspiration
 
-I started with the [lost in the mountains](http://lost-in-the-mountains.com/washington_climbing.php) location list, and started adding information.
+Started with the [lost in the mountains](http://lost-in-the-mountains.com/washington_climbing.php) location list.
