@@ -29,6 +29,7 @@ def get_forecast(args, lat, lon, start_date=datetime.date.today(), num_days=6, m
                            "/ndfd" + client_type + ".php")
     
     url = "?".join([FORECAST_BY_DAY_URL, query_string])
+    # print url
     resp = urllib.urlopen(url)
     tree = ET.parse(resp)
     forecast = ndfdparser.forecast(tree, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
