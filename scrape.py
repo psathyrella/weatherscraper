@@ -48,7 +48,7 @@ with open(args.location_fname) as location_file:
         rows.append(forecast)
 
 # write html output
-htmlcode = HTML.table(rows, header_row=['location<br>(forecast elevation)',] + days)
+htmlcode = HTML.table(rows, header_row=['location<br>(approx. elevation)',] + days)
 if not os.path.exists:
     os.makedirs('_html')
 with open(args.outfname, 'w') as outfile:
