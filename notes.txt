@@ -1,4 +1,18 @@
 ## links:
+compare models with SLP, Precip, and 1000-500 mb Thickness
+  http://www.atmos.washington.edu/~ovens/wxloop.cgi?/home/disk/data/images/models+all+-pat+%28eta|gfs|ngps|cmcg|ukmo|ecmwf%29/pcpn_slp_thkn/2015032412_***.gif
+UW weather graphics loops
+  http://www.atmos.washington.edu/~ovens/loops/
+
+U. Washington ATMS490 Course Page
+http://www.atmos.washington.edu/data/wxdisc.cgi
+
+Canadian Avalanche Association weather
+http://www.avalanche.ca/weather
+
+Snow-forecast.com
+http://www.snow-forecast.com/
+
 snow depth:
 http://www.nohrsc.noaa.gov/nsa/reports.html?region=Northwest&var=snowdepth&dy=2014&dm=12&dd=24&units=e&sort=value&filter=0
 http://www.pcta.org/discover-the-trail/maps-and-guidebooks/
