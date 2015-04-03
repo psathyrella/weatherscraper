@@ -1,4 +1,7 @@
 ## links:
+http://www.atmos.washington.edu/weather/radar.shtml
+http://www.atmos.washington.edu/mm5rt/
+http://www.atmos.washington.edu/weather/more.shtml
 compare models with SLP, Precip, and 1000-500 mb Thickness
   http://www.atmos.washington.edu/~ovens/wxloop.cgi?/home/disk/data/images/models+all+-pat+%28eta|gfs|ngps|cmcg|ukmo|ecmwf%29/pcpn_slp_thkn/2015032412_***.gif
 UW weather graphics loops
