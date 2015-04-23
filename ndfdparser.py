@@ -273,8 +273,8 @@ def get_html(data, htmldir, ndays=5, debug=False):
         tmax = find_max_temp(data['Daily Maximum Temperature'], day.day)
         tmin = find_min_temp(data['Daily Minimum Temperature'], day.day, (day + timedelta(days=1)).day)
 
-        if iday == 1:  # tomorrow (i.e. the soonest complete day for which we have a forecast)
-            write_tomorrows_history(day, tmax, tmin, liquid.get(day.day, None), wind_speed.get(day.day, None))
+        # if iday == 1:  # tomorrow (i.e. the soonest complete day for which we have a forecast)
+        #     write_tomorrows_history(day, tmax, tmin, liquid.get(day.day, None), wind_speed.get(day.day, None))
 
         icon_url = find_icon_for_time(day.day, 12, data['Conditions Icons'])  # find icon for noon this day
         if icon_url is not None:
