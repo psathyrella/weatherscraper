@@ -223,11 +223,71 @@ def find_icon_for_time(day, hour, icondata):
     return closest_icon_url  # can be None
 
 # ----------------------------------------------------------------------------------------
-def write_tomorrows_history(tomorrow, tmax, tmin, liquid, wind):
+def get_history(location_name):
+    n_max_days = 5
+
+    history_fname = 'history/' + location_name + '.csv'
+    if not os.path.exists(history_fname):
+        return None
+    fileinfo = {}
+    with open(history_fname, 'r') as historyfile:
+        reader = csv.DictReader(historyfile)
+        for line in reader:
+            key = datetime(int(line['year']), int(line['month']), int(line['day']))
+            now = datetime.now()
+            rounded_now = datetime(now.year, now.month, now.day)
+            if (key - rounded_now).days >= 0:  # entry is in the future (or is today)
+                continue
+            fileinfo[key] = line
+
+    history = {'days' : [], 'hi' : [], 'lo' : [], 'liquid' : []}
+    for iday in range(n_max_days):
+        day = datetime.now() - timedelta(n_max_days - iday)
+        history['days'].append(day.day)
+        key = datetime(day.year, day.month, day.day)
+        if key in fileinfo:
+            history['hi'].append(float(fileinfo[key]['hi']))
+            history['lo'].append(float(fileinfo[key]['lo']))
+            history['liquid'].append(float(fileinfo[key]['liquid']))
+        else:
+            history['hi'].append(None)
+            history['lo'].append(None)
+            history['liquid'].append(None)
+
+    return history
+
+# ----------------------------------------------------------------------------------------
+def make_history_plot(location_name):
+    history = get_history(location_name)
+
+    import matplotlib as mpl
+    mpl.use('Agg')
+    import os
+    import matplotlib.pyplot as plt
+    
+    fsize = 20
+    mpl.rcParams.update({
+        # 'font.size': fsize,
+        'legend.fontsize': fsize,
+        'axes.titlesize': fsize,
+        # 'axes.labelsize': fsize,
+        'xtick.labelsize': fsize,
+        'ytick.labelsize': fsize,
+        'axes.labelsize': fsize
+    })
+    
+    fighi = plt.plot(history['days'], history['hi'])
+    figlo = plt.plot(history['days'], history['lo'])
+    figliquid = plt.plot(history['days'], history['liquid'])
+    plotdir = '.'
+    plt.savefig(plotdir + '/foo.png')
+
+# ----------------------------------------------------------------------------------------
+def write_tomorrows_history(location_name, tomorrow, tmax, tmin, liquid, wind):
     rounded_tomorrow = datetime(tomorrow.year, tomorrow.month, tomorrow.day)  # no hours and minutes and whatnot
 
     history = {}
-    history_fname = 'history.csv'
+    history_fname = 'history/' + location_name + '.csv'
     history_header = ('month', 'day', 'year', 'hi', 'lo', 'liquid', 'wind')
     if os.path.exists(history_fname):  # read in any existing history
         with open(history_fname, 'r') as historyfile:
@@ -246,14 +306,14 @@ def write_tomorrows_history(tomorrow, tmax, tmin, liquid, wind):
                                  'lo' : tmin,
                                  'liquid' : liquid,
                                  'wind' : wind}
-    with open('history.csv', 'w') as historyfile:
+    with open(history_fname, 'w') as historyfile:
         writer = csv.DictWriter(historyfile, history_header)
         writer.writeheader()
         for line in history.values():
             writer.writerow(line)
 
 # ----------------------------------------------------------------------------------------
-def get_html(data, htmldir, ndays=5, debug=False):
+def get_html(data, location_name, htmldir, ndays=5, debug=False):
     liquid = combine_days('sum', data['Liquid Precipitation Amount'])
     snow = combine_days('sum', data['Snow Amount'])
     wind_speed = combine_days('mean', data['Wind Speed'])
@@ -265,7 +325,7 @@ def get_html(data, htmldir, ndays=5, debug=False):
         print '%-5s    %4s   %5s%5s   %5s  %5s' % ('', 'hi lo', 'precip (snow)', '%', 'wind', 'cloud')
     rowlist = []
 
-        
+    make_history_plot(location_name)
 
     for iday in range(ndays):
         day = datetime.now() + timedelta(days=iday)
@@ -274,7 +334,7 @@ def get_html(data, htmldir, ndays=5, debug=False):
         tmin = find_min_temp(data['Daily Minimum Temperature'], day.day, (day + timedelta(days=1)).day)
 
         if iday == 1:  # tomorrow (i.e. the soonest complete day for which we have a forecast)
-            write_tomorrows_history(day, tmax, tmin, liquid.get(day.day, None), wind_speed.get(day.day, None))
+            write_tomorrows_history(location_name, day, tmax, tmin, liquid.get(day.day, None), wind_speed.get(day.day, None))
 
         icon_url = find_icon_for_time(day.day, 12, data['Conditions Icons'])  # find icon for noon this day
         if icon_url is not None:
@@ -365,13 +425,13 @@ def get_html(data, htmldir, ndays=5, debug=False):
     return tv, rowlist
 
 # ----------------------------------------------------------------------------------------
-def forecast(tree, htmldir):
+def forecast(tree, location_name, htmldir):
     root = tree.getroot()
     time_layouts = get_time_layouts(root)
     data = parse_data(root, time_layouts)
     point = root.find('data').find('location').find('point')
     lat, lon = point.get('latitude'), point.get('longitude')
-    tv, rowlist = get_html(data, htmldir, debug=True)
+    tv, rowlist = get_html(data, location_name, htmldir, debug=True)
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
     rowlist.insert(0, '<a href="' + point_forecast_url + '">LOCATION</a>')
 

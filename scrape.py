@@ -16,7 +16,7 @@ parser.add_argument('--outfname', required=True)
 args = parser.parse_args()
 
 # ----------------------------------------------------------------------------------------
-def get_forecast(args, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
+def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
     location_info = [('lat', lat), ('lon', lon)]
     params = location_info + [("format", "24 hourly"),
                               ("startDate", start_date.strftime("%Y-%m-%d")),
@@ -32,7 +32,7 @@ def get_forecast(args, lat, lon, start_date=datetime.date.today(), num_days=6, m
     # print url
     resp = urllib.urlopen(url)
     tree = ET.parse(resp)
-    forecast = ndfdparser.forecast(tree, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+    forecast = ndfdparser.forecast(tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
 
 # ----------------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ with open(args.location_fname) as location_file:
     for line in reader:
         print '\n%s:' % line['name']
         args.location = ()
-        days, forecast = get_forecast(args, line['lat'], line['lon'])
+        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
         forecast[0] = forecast[0].replace('LOCATION</a>', line['name'] + '</a><br>' + line['elevation'] + ' ft')
         rows.append(forecast)
 
