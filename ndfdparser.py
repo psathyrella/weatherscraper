@@ -268,6 +268,7 @@ def make_history_plot(location_name):
     fsize = 20
     mpl.rcParams.update({
         # 'font.size': fsize,
+        'font.family': 'serif',
         'legend.fontsize': fsize,
         'axes.titlesize': fsize,
         # 'axes.labelsize': fsize,
@@ -275,10 +276,34 @@ def make_history_plot(location_name):
         'ytick.labelsize': fsize,
         'axes.labelsize': fsize
     })
-    
-    fighi = plt.plot(history['days'], history['hi'])
-    figlo = plt.plot(history['days'], history['lo'])
-    figliquid = plt.plot(history['days'], history['liquid'])
+
+    fig, ax1 = plt.subplots()
+    lo_color = '#99B2FF'
+    hi_color = 'red'
+    fighi = ax1.plot(history['days'], history['hi'], color=hi_color, linewidth=5)
+    figlo = ax1.plot(history['days'], history['lo'], color=lo_color, linewidth=5)
+    ax1.set_xlabel('date')
+    ax1.set_ylabel('deg F', color='black')
+
+    ax2 = ax1.twinx()
+    liquid_color = '#1947D1'
+    # figliquid = ax2.plot(history['days'], history['liquid'], color=liquid_color, linewidth=3)
+    liquid_hist, weights = [], []
+    for iday in range(len(history['days'])):
+        day = history['days'][iday]
+        if history['liquid'][iday] is None:
+            continue
+        for il in range(int(1000*history['liquid'][iday])):
+            liquid_hist.append(day)
+            weights.append(1./1000)
+    ax2.hist(liquid_hist, weights=weights)
+    ax2.set_ylabel('inches', color=liquid_color)
+    for tl in ax2.get_yticklabels():
+        tl.set_color(liquid_color)
+
+    # fig.tight_layout()
+    plt.xlim(history['days'][0], history['days'][-1])
+    plt.locator_params(nbins=4)
     plotdir = '.'
     plt.savefig(plotdir + '/foo.png')
 
