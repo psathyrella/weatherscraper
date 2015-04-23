@@ -223,6 +223,36 @@ def find_icon_for_time(day, hour, icondata):
     return closest_icon_url  # can be None
 
 # ----------------------------------------------------------------------------------------
+def write_tomorrows_history(tomorrow, tmax, tmin, liquid, wind):
+    rounded_tomorrow = datetime(tomorrow.year, tomorrow.month, tomorrow.day)  # no hours and minutes and whatnot
+
+    history = {}
+    history_fname = 'history.csv'
+    history_header = ('month', 'day', 'year', 'hi', 'lo', 'liquid', 'wind')
+    if os.path.exists(history_fname):  # read in any existing history
+        with open(history_fname, 'r') as historyfile:
+            reader = csv.DictReader(historyfile)
+            for line in reader:
+                key = datetime(int(line['year']), int(line['month']), int(line['day']))
+                history[key] = line
+
+    # tomorrow = datetime.now() + timedelta(days=1)
+    if rounded_tomorrow in history:
+        print 'replacing'
+    history[rounded_tomorrow] = {'month' : tomorrow.month,
+                                 'day' : tomorrow.day,
+                                 'year' : tomorrow.year,
+                                 'hi' : tmax,
+                                 'lo' : tmin,
+                                 'liquid' : liquid,
+                                 'wind' : wind}
+    with open('history.csv', 'w') as historyfile:
+        writer = csv.DictWriter(historyfile, history_header)
+        writer.writeheader()
+        for line in history.values():
+            writer.writerow(line)
+
+# ----------------------------------------------------------------------------------------
 def get_html(data, htmldir, ndays=5, debug=False):
     liquid = combine_days('sum', data['Liquid Precipitation Amount'])
     snow = combine_days('sum', data['Snow Amount'])
@@ -234,11 +264,18 @@ def get_html(data, htmldir, ndays=5, debug=False):
     if debug:
         print '%-5s    %4s   %5s%5s   %5s  %5s' % ('', 'hi lo', 'precip (snow)', '%', 'wind', 'cloud')
     rowlist = []
+
+        
+
     for iday in range(ndays):
         day = datetime.now() + timedelta(days=iday)
     
         tmax = find_max_temp(data['Daily Maximum Temperature'], day.day)
         tmin = find_min_temp(data['Daily Minimum Temperature'], day.day, (day + timedelta(days=1)).day)
+
+        if iday == 1:  # tomorrow (i.e. the soonest complete day for which we have a forecast)
+            write_tomorrows_history(day, tmax, tmin, liquid.get(day.day, None), wind_speed.get(day.day, None))
+
         icon_url = find_icon_for_time(day.day, 12, data['Conditions Icons'])  # find icon for noon this day
         if icon_url is not None:
             icon_file = os.path.basename(icon_url)
