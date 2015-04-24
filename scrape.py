@@ -64,6 +64,7 @@ with open(args.outfname, 'w') as outfile:
     sundries.append(['<a href="http://www.mountain-forecast.com/peaks/Mount-Waddington/forecasts/3500">Mt Waddington</a>', ])
     sundries.append(['<a href="http://weather.gc.ca/city/pages/bc-50_metric_e.html">Squamish</a>', ])
     outfile.write(HTML.table(sundries, header_row=['<b>sundries</b><br>', ]))
-    outfile.write('<br>Note: "history" is the point forecast archived on the day before, i.e. less than 24 hours in advance .<br>')
+    if not args.no_history:
+        outfile.write('<br>Note: "history" is the point forecast archived on the day before, i.e. less than 24 hours in advance .<br>')
     outfile.write('<br><br><a href=\"https://github.com/psathyrella/weatherscraper\">github</a>\n')
     
