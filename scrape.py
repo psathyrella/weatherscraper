@@ -13,6 +13,7 @@ import htmlinfo
 parser = argparse.ArgumentParser()
 parser.add_argument('--location-fname', default='all-locations.csv')
 parser.add_argument('--outfname', required=True)
+parser.add_argument('--no-history', action='store_true', help='Don\'t add a column with history plot (still caches current forecast even if true)')
 args = parser.parse_args()
 
 # ----------------------------------------------------------------------------------------
@@ -32,7 +33,7 @@ def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today()
     # print url
     resp = urllib.urlopen(url)
     tree = ET.parse(resp)
-    forecast = ndfdparser.forecast(tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+    forecast = ndfdparser.forecast(args, tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
 
 # ----------------------------------------------------------------------------------------
@@ -48,7 +49,10 @@ with open(args.location_fname) as location_file:
         rows.append(forecast)
 
 # write html output
-htmlcode = HTML.table(rows, header_row=['location<br>(approx. elevation)',] + days)
+header = ['location<br>(approx. elevation)',]
+if not args.no_history:
+    header.append('history')
+htmlcode = HTML.table(rows, header_row=header + days)
 if not os.path.exists:
     os.makedirs('_html')
 with open(args.outfname, 'w') as outfile:

@@ -2,7 +2,7 @@
 import sys
 import os
 from datetime import datetime, timedelta
-from subprocess import check_call
+from subprocess import check_call, CalledProcessError
 from xml.etree import ElementTree as ET
 import csv
 
@@ -223,10 +223,9 @@ def find_icon_for_time(day, hour, icondata):
     return closest_icon_url  # can be None
 
 # ----------------------------------------------------------------------------------------
-def get_history(location_name):
+def get_history(history_fname):
     n_max_days = 5
 
-    history_fname = 'history/' + location_name + '.csv'
     if not os.path.exists(history_fname):
         return None
     fileinfo = {}
@@ -240,35 +239,49 @@ def get_history(location_name):
                 continue
             fileinfo[key] = line
 
-    history = {'days' : [], 'hi' : [], 'lo' : [], 'liquid' : []}
+    history = {'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : []}
+    found_one_day = False
     for iday in range(n_max_days):
         day = datetime.now() - timedelta(n_max_days - iday)
         history['days'].append(day.day)
         key = datetime(day.year, day.month, day.day)
         if key in fileinfo:
+            found_one_day = True
             history['hi'].append(float(fileinfo[key]['hi']))
             history['lo'].append(float(fileinfo[key]['lo']))
             history['liquid'].append(float(fileinfo[key]['liquid']))
+            history['snow'].append(float(fileinfo[key]['snow']) / 12.)
         else:
             history['hi'].append(None)
             history['lo'].append(None)
             history['liquid'].append(None)
+            history['snow'].append(None)
 
+    if not found_one_day:
+        return None
     return history
 
 # ----------------------------------------------------------------------------------------
-def make_history_plot(location_name):
-    history = get_history(location_name)
+def make_history_plot(location_name, htmldir):
+    # if not os.path.exists(htmldir + '/history'):
+    #     os.makedirs(plotdir + '/history')
+    history = get_history(htmldir + '/history/' + location_name + '.csv')
+    if history is None:
+        return None
 
     import matplotlib as mpl
     mpl.use('Agg')
     import os
     import matplotlib.pyplot as plt
+    nxbins = 5
+    nybins = 2
     
-    fsize = 20
+    fsize = 40
     mpl.rcParams.update({
+        'figure.autolayout': True,  # doesn't *##*$@!ing do anything
         # 'font.size': fsize,
         'font.family': 'serif',
+        'font.weight': 'bold',
         'legend.fontsize': fsize,
         'axes.titlesize': fsize,
         # 'axes.labelsize': fsize,
@@ -278,42 +291,63 @@ def make_history_plot(location_name):
     })
 
     fig, ax1 = plt.subplots()
+    fig.set_size_inches(8, 5)
     lo_color = '#99B2FF'
     hi_color = 'red'
-    fighi = ax1.plot(history['days'], history['hi'], color=hi_color, linewidth=5)
-    figlo = ax1.plot(history['days'], history['lo'], color=lo_color, linewidth=5)
-    ax1.set_xlabel('date')
-    ax1.set_ylabel('deg F', color='black')
+    plt.locator_params(nbins=nxbins, axis='x')
+    plt.locator_params(nbins=nybins, axis='y')
 
     ax2 = ax1.twinx()
     liquid_color = '#1947D1'
+    snow_color = 'grey'
+
     # figliquid = ax2.plot(history['days'], history['liquid'], color=liquid_color, linewidth=3)
-    liquid_hist, weights = [], []
+    # figliquid = ax2.plot(history['days'], history['snow'], color=snow_color, linewidth=3)
+
+    liquid_hist, liquid_weights = [], []
+    snow_hist, snow_weights = [], []
     for iday in range(len(history['days'])):
         day = history['days'][iday]
-        if history['liquid'][iday] is None:
-            continue
-        for il in range(int(1000*history['liquid'][iday])):
-            liquid_hist.append(day)
-            weights.append(1./1000)
-    ax2.hist(liquid_hist, weights=weights)
-    ax2.set_ylabel('inches', color=liquid_color)
-    for tl in ax2.get_yticklabels():
-        tl.set_color(liquid_color)
+        if history['liquid'][iday] is not None:
+            for il in range(int(1000*history['liquid'][iday])):
+                liquid_hist.append(day)
+                liquid_weights.append(1./1000)
+        if history['snow'][iday] is not None:
+            for il in range(int(1000*history['snow'][iday])):
+                snow_hist.append(day)
+                snow_weights.append(1./1000)
+    ax2.hist(liquid_hist, bins=len(history['days']), range=(history['days'][0]-.6, history['days'][-1]+.4), weights=liquid_weights, rwidth=.5, color=liquid_color, alpha=0.5)
+    ax2.hist(snow_hist, bins=len(history['days']), range=(history['days'][0]-.4, history['days'][-1]+.6), weights=snow_weights, rwidth=.5, color=snow_color, alpha=0.5)
 
-    # fig.tight_layout()
-    plt.xlim(history['days'][0], history['days'][-1])
-    plt.locator_params(nbins=4)
-    plotdir = '.'
-    plt.savefig(plotdir + '/foo.png')
+    fighi = ax1.plot(history['days'], history['hi'], color=hi_color, linewidth=5)
+    figlo = ax1.plot(history['days'], history['lo'], color=lo_color, linewidth=5)
+
+    plt.locator_params(nbins=nxbins, axis='x')
+    plt.locator_params(nbins=nybins, axis='y')
+    plt.gcf().subplots_adjust(bottom=0.11, left=0.11, right=0.87, top=0.87)
+    plt.xlim(history['days'][0] - 0.25, history['days'][-1] + 0.25)
+
+    y2min, y2max = ax2.get_ylim()
+    xmin, xmax = ax2.get_xlim()
+    fig.text(0.88, 0.95, 'in.', color=liquid_color, fontsize=20, alpha=0.5)
+    fig.text(0.93, 0.95, 'ft.', color=snow_color, fontsize=20, alpha=0.5)
+    fig.text(0.01, 0.95, 'deg F', color='black', fontsize=20)
+    fig.text(0.02, 0.72, 'hi', color=hi_color, fontsize=20)
+    fig.text(0.02, 0.67, 'lo', color=lo_color, fontsize=20)
+    fig.text(0.88, 0.72, 'liquid', color=liquid_color, fontsize=20, alpha=0.5)
+    fig.text(0.88, 0.67, 'snow', color=snow_color, fontsize=20, alpha=0.5)
+    plt.suptitle(location_name, fontsize=20)
+
+    plotfname = htmldir + '/history/' + location_name + '.png'
+    plt.savefig(plotfname)
+    return plotfname
 
 # ----------------------------------------------------------------------------------------
-def write_tomorrows_history(location_name, tomorrow, tmax, tmin, liquid, wind):
+def write_tomorrows_history(history_fname, tomorrow, tmax, tmin, liquid, snow, wind):
     rounded_tomorrow = datetime(tomorrow.year, tomorrow.month, tomorrow.day)  # no hours and minutes and whatnot
 
     history = {}
-    history_fname = 'history/' + location_name + '.csv'
-    history_header = ('month', 'day', 'year', 'hi', 'lo', 'liquid', 'wind')
+    history_header = ('month', 'day', 'year', 'hi', 'lo', 'liquid', 'snow', 'wind')
     if os.path.exists(history_fname):  # read in any existing history
         with open(history_fname, 'r') as historyfile:
             reader = csv.DictReader(historyfile)
@@ -330,6 +364,7 @@ def write_tomorrows_history(location_name, tomorrow, tmax, tmin, liquid, wind):
                                  'hi' : tmax,
                                  'lo' : tmin,
                                  'liquid' : liquid,
+                                 'snow' : snow,
                                  'wind' : wind}
     with open(history_fname, 'w') as historyfile:
         writer = csv.DictWriter(historyfile, history_header)
@@ -338,7 +373,7 @@ def write_tomorrows_history(location_name, tomorrow, tmax, tmin, liquid, wind):
             writer.writerow(line)
 
 # ----------------------------------------------------------------------------------------
-def get_html(data, location_name, htmldir, ndays=5, debug=False):
+def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
     liquid = combine_days('sum', data['Liquid Precipitation Amount'])
     snow = combine_days('sum', data['Snow Amount'])
     wind_speed = combine_days('mean', data['Wind Speed'])
@@ -350,8 +385,14 @@ def get_html(data, location_name, htmldir, ndays=5, debug=False):
         print '%-5s    %4s   %5s%5s   %5s  %5s' % ('', 'hi lo', 'precip (snow)', '%', 'wind', 'cloud')
     rowlist = []
 
-    make_history_plot(location_name)
-
+    history_plotname = make_history_plot(location_name, htmldir)
+    if args.no_history:
+        pass
+    elif history_plotname is None:
+        rowlist.append('n/a')
+    else:
+        rowlist.append('<a target="_blank" href="' + history_plotname + '"><img  src="' + history_plotname + '" alt="weather" width="120" height="75">')
+        
     for iday in range(ndays):
         day = datetime.now() + timedelta(days=iday)
     
@@ -359,16 +400,21 @@ def get_html(data, location_name, htmldir, ndays=5, debug=False):
         tmin = find_min_temp(data['Daily Minimum Temperature'], day.day, (day + timedelta(days=1)).day)
 
         if iday == 1:  # tomorrow (i.e. the soonest complete day for which we have a forecast)
-            write_tomorrows_history(location_name, day, tmax, tmin, liquid.get(day.day, None), wind_speed.get(day.day, None))
+            write_tomorrows_history(htmldir + '/history/' + location_name + '.csv', day, tmax, tmin, liquid.get(day.day, None), snow.get(day.day, None), wind_speed.get(day.day, None))
 
         icon_url = find_icon_for_time(day.day, 12, data['Conditions Icons'])  # find icon for noon this day
+        icon_url = icon_url.replace('http://forecast.weather.gov/images/wtf', 'http://www.nws.noaa.gov/weather/images/fcicons')  # some of the images seem to not be at the orignal url, but if you google them...
         if icon_url is not None:
             icon_file = os.path.basename(icon_url)
             if not os.path.exists(htmldir + '/images'):
                 os.makedirs(htmldir + '/images')
             if not os.path.exists(htmldir + '/images/' + icon_file):
                 print 'downloading %s' % icon_url
-                check_call(['wget', '-q', '-O', htmldir + '/images/' + icon_file, icon_url])
+                try:
+                    check_call(['wget', '-q', '-O', htmldir + '/images/' + icon_file, icon_url])
+                except CalledProcessError:
+                    print 'ERROR ' + icon_file + ' not found at ' + icon_url
+                    
         else:
             icon_file = 'missing.jpg'
 
@@ -450,13 +496,13 @@ def get_html(data, location_name, htmldir, ndays=5, debug=False):
     return tv, rowlist
 
 # ----------------------------------------------------------------------------------------
-def forecast(tree, location_name, htmldir):
+def forecast(args, tree, location_name, htmldir):
     root = tree.getroot()
     time_layouts = get_time_layouts(root)
     data = parse_data(root, time_layouts)
     point = root.find('data').find('location').find('point')
     lat, lon = point.get('latitude'), point.get('longitude')
-    tv, rowlist = get_html(data, location_name, htmldir, debug=True)
+    tv, rowlist = get_html(args, data, location_name, htmldir, debug=True)
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
     rowlist.insert(0, '<a href="' + point_forecast_url + '">LOCATION</a>')
 
