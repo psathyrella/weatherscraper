@@ -13,10 +13,11 @@ import htmlinfo
 parser = argparse.ArgumentParser()
 parser.add_argument('--location-fname', default='all-locations.csv')
 parser.add_argument('--outfname', required=True)
+parser.add_argument('--no-history', action='store_true', help='Don\'t add a column with history plot (still caches current forecast even if true)')
 args = parser.parse_args()
 
 # ----------------------------------------------------------------------------------------
-def get_forecast(args, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
+def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
     location_info = [('lat', lat), ('lon', lon)]
     params = location_info + [("format", "24 hourly"),
                               ("startDate", start_date.strftime("%Y-%m-%d")),
@@ -32,7 +33,7 @@ def get_forecast(args, lat, lon, start_date=datetime.date.today(), num_days=6, m
     # print url
     resp = urllib.urlopen(url)
     tree = ET.parse(resp)
-    forecast = ndfdparser.forecast(tree, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+    forecast = ndfdparser.forecast(args, tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
 
 # ----------------------------------------------------------------------------------------
@@ -43,12 +44,15 @@ with open(args.location_fname) as location_file:
     for line in reader:
         print '\n%s:' % line['name']
         args.location = ()
-        days, forecast = get_forecast(args, line['lat'], line['lon'])
+        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
         forecast[0] = forecast[0].replace('LOCATION</a>', line['name'] + '</a><br>' + line['elevation'] + ' ft')
         rows.append(forecast)
 
 # write html output
-htmlcode = HTML.table(rows, header_row=['location<br>(approx. elevation)',] + days)
+header = ['location<br>(approx. elevation)',]
+if not args.no_history:
+    header.append('history')
+htmlcode = HTML.table(rows, header_row=header + days)
 if not os.path.exists:
     os.makedirs('_html')
 with open(args.outfname, 'w') as outfile:
@@ -62,5 +66,7 @@ with open(args.outfname, 'w') as outfile:
     sundries.append(['<a href="http://www.mountain-forecast.com/peaks/Mount-Waddington/forecasts/3500">Mt Waddington</a>', ])
     sundries.append(['<a href="http://weather.gc.ca/city/pages/bc-50_metric_e.html">Squamish</a>', ])
     outfile.write(HTML.table(sundries, header_row=['<b>sundries</b><br>', ]))
+    if not args.no_history:
+        outfile.write('<br>Note: "history" is the point forecast archived on the day before, i.e. less than 24 hours in advance .<br>')
     outfile.write('<br><br><a href=\"https://github.com/psathyrella/weatherscraper\">github</a>\n')
     
