@@ -263,15 +263,14 @@ def get_history(history_fname):
 
 # ----------------------------------------------------------------------------------------
 def make_history_plot(location_name, htmldir):
-    # if not os.path.exists(htmldir + '/history'):
-    #     os.makedirs(plotdir + '/history')
+    if not os.path.exists(htmldir + '/history'):
+        os.makedirs(htmldir + '/history')
     history = get_history(htmldir + '/history/' + location_name + '.csv')
     if history is None:
         return None
 
     import matplotlib as mpl
     mpl.use('Agg')
-    import os
     import matplotlib.pyplot as plt
     nxbins = 5
     nybins = 2
@@ -356,8 +355,8 @@ def write_tomorrows_history(history_fname, tomorrow, tmax, tmin, liquid, snow, w
                 history[key] = line
 
     # tomorrow = datetime.now() + timedelta(days=1)
-    if rounded_tomorrow in history:
-        print 'replacing'
+    # if rounded_tomorrow in history:
+    #     print 'replacing'
     history[rounded_tomorrow] = {'month' : tomorrow.month,
                                  'day' : tomorrow.day,
                                  'year' : tomorrow.year,
