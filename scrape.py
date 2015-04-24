@@ -52,7 +52,9 @@ htmlcode = HTML.table(rows, header_row=['location<br>(approx. elevation)',] + da
 if not os.path.exists:
     os.makedirs('_html')
 with open(args.outfname, 'w') as outfile:
-    outfile.write('retreived %s\n' % datetime.datetime.now().strftime('%B %d %Y at %H:%M'))
+    outfile.write('retreived %s<br>' % datetime.datetime.now().strftime('%B %d %Y at %H:%M'))
+    tmpdatestr = datetime.datetime.now().strftime('%Y%m%d12')
+    outfile.write('<a href="http://www.atmos.washington.edu/~ovens/wxloop.cgi?/home/disk/data/images/models+all+-pat+%28eta|gfs|ngps|cmcg|ukmo|ecmwf%29/pcpn_slp_thkn/' + tmpdatestr + '_***.gif+-update+3600">overview</a>\n')
     outfile.write(htmlinfo.headtext)
     outfile.write(htmlcode)
 
