@@ -355,8 +355,8 @@ def write_tomorrows_history(history_fname, tomorrow, tmax, tmin, liquid, snow, w
                 history[key] = line
 
     # tomorrow = datetime.now() + timedelta(days=1)
-    if rounded_tomorrow in history:
-        print 'replacing'
+    # if rounded_tomorrow in history:
+    #     print 'replacing'
     history[rounded_tomorrow] = {'month' : tomorrow.month,
                                  'day' : tomorrow.day,
                                  'year' : tomorrow.year,
