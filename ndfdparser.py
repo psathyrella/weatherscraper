@@ -263,15 +263,14 @@ def get_history(history_fname):
 
 # ----------------------------------------------------------------------------------------
 def make_history_plot(location_name, htmldir):
-    # if not os.path.exists(htmldir + '/history'):
-    #     os.makedirs(plotdir + '/history')
+    if not os.path.exists(htmldir + '/history'):
+        os.makedirs(htmldir + '/history')
     history = get_history(htmldir + '/history/' + location_name + '.csv')
     if history is None:
         return None
 
     import matplotlib as mpl
     mpl.use('Agg')
-    import os
     import matplotlib.pyplot as plt
     nxbins = 5
     nybins = 2
