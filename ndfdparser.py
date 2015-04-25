@@ -5,6 +5,9 @@ from datetime import datetime, timedelta
 from subprocess import check_call, CalledProcessError
 from xml.etree import ElementTree as ET
 import csv
+import matplotlib as mpl
+mpl.use('Agg')
+import matplotlib.pyplot as plt
 
 weekdays = ('Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun')
 
@@ -262,16 +265,13 @@ def get_history(history_fname):
     return history
 
 # ----------------------------------------------------------------------------------------
-def make_history_plot(location_name, htmldir):
+def make_history_plot(args, location_name, htmldir):
     if not os.path.exists(htmldir + '/history'):
         os.makedirs(htmldir + '/history')
     history = get_history(htmldir + '/history/' + location_name + '.csv')
-    if history is None:
+    if history is None or args.no_history:  # will also fail if we only have one day's worth of history
         return None
 
-    import matplotlib as mpl
-    mpl.use('Agg')
-    import matplotlib.pyplot as plt
     nxbins = 5
     nybins = 2
     
@@ -384,7 +384,7 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
         print '%-5s    %4s   %5s%5s   %5s  %5s' % ('', 'hi lo', 'precip (snow)', '%', 'wind', 'cloud')
     rowlist = []
 
-    history_plotname = make_history_plot(location_name, htmldir)
+    history_plotname = make_history_plot(args, location_name, htmldir)
     if args.no_history:
         pass
     elif history_plotname is None:
