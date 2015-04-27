@@ -341,7 +341,7 @@ def make_history_plot(args, location_name, htmldir):
 
     plotfname = htmldir + '/history/' + location_name + '.png'
     plt.savefig(plotfname)
-    return plotfname
+    return plotfname.replace(htmldir + '/', '')
 
 # ----------------------------------------------------------------------------------------
 def write_tomorrows_history(history_fname, tomorrow, tmax, tmin, liquid, snow, wind):
