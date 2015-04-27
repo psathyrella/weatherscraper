@@ -305,16 +305,17 @@ def make_history_plot(args, location_name, htmldir):
 
     liquid_hist, liquid_weights = [], []
     snow_hist, snow_weights = [], []
+    n_big_number = 1e5
     for iday in range(len(history['days'])):
         day = history['days'][iday]
         if history['liquid'][iday] is not None:
-            for il in range(int(1000*history['liquid'][iday])):
+            for il in range(int(n_big_number*history['liquid'][iday]) + 1):  # NOTE this gives you 1./n_big_number instead of zero
                 liquid_hist.append(day)
-                liquid_weights.append(1./1000)
+                liquid_weights.append(1./n_big_number)
         if history['snow'][iday] is not None:
-            for il in range(int(1000*history['snow'][iday])):
+            for il in range(int(n_big_number*history['snow'][iday]) + 1):  # NOTE this gives you 1./n_big_number instead of zero
                 snow_hist.append(day)
-                snow_weights.append(1./1000)
+                snow_weights.append(1./n_big_number)
     ax2.hist(liquid_hist, bins=len(history['days']), range=(history['days'][0]-.6, history['days'][-1]+.4), weights=liquid_weights, rwidth=.5, color=liquid_color, alpha=0.5)
     ax2.hist(snow_hist, bins=len(history['days']), range=(history['days'][0]-.4, history['days'][-1]+.6), weights=snow_weights, rwidth=.5, color=snow_color, alpha=0.5)
 
@@ -327,6 +328,7 @@ def make_history_plot(args, location_name, htmldir):
     plt.xlim(history['days'][0] - 0.25, history['days'][-1] + 0.25)
 
     y2min, y2max = ax2.get_ylim()
+    ax2.set_ylim(y2min, max(0.5, y2max))
     xmin, xmax = ax2.get_xlim()
     fig.text(0.88, 0.95, 'in.', color=liquid_color, fontsize=20, alpha=0.5)
     fig.text(0.93, 0.95, 'ft.', color=snow_color, fontsize=20, alpha=0.5)
