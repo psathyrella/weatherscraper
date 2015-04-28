@@ -2,6 +2,8 @@
 import sys
 import os
 from datetime import datetime, timedelta
+import numpy
+import math
 from subprocess import check_call, CalledProcessError
 from xml.etree import ElementTree as ET
 import csv
@@ -293,8 +295,8 @@ def make_history_plot(args, location_name, htmldir):
     fig.set_size_inches(8, 5)
     lo_color = '#99B2FF'
     hi_color = 'red'
-    plt.locator_params(nbins=nxbins, axis='x')
-    plt.locator_params(nbins=nybins, axis='y')
+    # plt.locator_params(nbins=nxbins, axis='x')
+    # plt.locator_params(nbins=nybins, axis='y')
 
     ax2 = ax1.twinx()
     liquid_color = '#1947D1'
@@ -322,21 +324,48 @@ def make_history_plot(args, location_name, htmldir):
     fighi = ax1.plot(history['days'], history['hi'], color=hi_color, linewidth=5)
     figlo = ax1.plot(history['days'], history['lo'], color=lo_color, linewidth=5)
 
-    plt.locator_params(nbins=nxbins, axis='x')
-    plt.locator_params(nbins=nybins, axis='y')
-    plt.gcf().subplots_adjust(bottom=0.11, left=0.11, right=0.87, top=0.87)
+    # plt.locator_params(nbins=nxbins, axis='x')
+    # plt.locator_params(nbins=nybins, axis='y')
+    plt.gcf().subplots_adjust(bottom=0.1, left=0.11, right=0.87, top=0.85)
     plt.xlim(history['days'][0] - 0.25, history['days'][-1] + 0.25)
 
-    y2min, y2max = ax2.get_ylim()
-    ax2.set_ylim(y2min, max(0.5, y2max))
-    xmin, xmax = ax2.get_xlim()
-    fig.text(0.88, 0.95, 'in.', color=liquid_color, fontsize=20, alpha=0.5)
-    fig.text(0.93, 0.95, 'ft.', color=snow_color, fontsize=20, alpha=0.5)
-    fig.text(0.01, 0.95, 'deg F', color='black', fontsize=20)
-    fig.text(0.02, 0.72, 'hi', color=hi_color, fontsize=20)
-    fig.text(0.02, 0.67, 'lo', color=lo_color, fontsize=20)
-    fig.text(0.88, 0.72, 'liquid', color=liquid_color, fontsize=20, alpha=0.5)
-    fig.text(0.88, 0.67, 'snow', color=snow_color, fontsize=20, alpha=0.5)
+    mintemp = min(t for t in history['lo'] if t is not None)
+    maxtemp = max(t for t in history['hi'] if t is not None)
+    minprecip = min(p for p in history['liquid'] + history['snow'] if p is not None)  # snow's already been converted to feet
+    maxprecip = max(p for p in history['liquid'] + history['snow'] if p is not None)
+
+    modulo = 5.
+    mintemp = int(math.floor(mintemp / modulo)) * modulo
+    maxtemp = int(math.ceil(maxtemp / modulo)) * modulo
+    ax1.set_ylim(mintemp, maxtemp)
+
+    ax1.yaxis.set_ticks([mintemp, int(mintemp + 0.5*(maxtemp-mintemp)), maxtemp])
+    if maxprecip >= 0.5:
+        modulo = 1.
+        minprecip = int(math.floor(minprecip / modulo)) * modulo
+        maxprecip = int(math.ceil(maxprecip / modulo)) * modulo
+        ax2.set_ylim(minprecip, max(0.5, maxprecip))
+        ax2.yaxis.set_ticks([minprecip, minprecip + 0.5*(maxprecip-minprecip), maxprecip])
+        ax2.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.1f'))
+    else:
+        modulo = 0.5
+        minprecip = int(math.floor(minprecip / modulo)) * modulo
+        maxprecip = int(math.ceil(maxprecip / modulo)) * modulo
+        ax2.set_ylim(minprecip, max(0.5, maxprecip))
+
+        ax2.yaxis.set_ticks([minprecip, minprecip + 0.5*(maxprecip-minprecip), maxprecip])
+        ax2.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
+
+    ax1.spines['top'].set_visible(False)
+    ax1.get_xaxis().tick_bottom()
+
+    fig.text(0.88, 0.7, 'in.', color=liquid_color, fontsize=20, alpha=0.5)
+    fig.text(0.93, 0.7, 'ft.', color=snow_color, fontsize=20, alpha=0.5)
+    fig.text(0.003, 0.7, 'deg F', color='black', fontsize=20)
+    fig.text(0.02, 0.35, 'hi', color=hi_color, fontsize=20)
+    fig.text(0.02, 0.3, 'lo', color=lo_color, fontsize=20)
+    fig.text(0.88, 0.35, 'liquid', color=liquid_color, fontsize=20, alpha=0.5)
+    fig.text(0.88, 0.3, 'snow', color=snow_color, fontsize=20, alpha=0.5)
     plt.suptitle(location_name, fontsize=20)
 
     plotfname = htmldir + '/history/' + location_name + '.png'
