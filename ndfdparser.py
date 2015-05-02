@@ -312,22 +312,31 @@ def make_history_plot(args, location_name, htmldir):
         day = history['days'][iday]
         if history['liquid'][iday] is not None:
             for il in range(int(n_big_number*history['liquid'][iday]) + 1):  # NOTE this gives you 1./n_big_number instead of zero
-                liquid_hist.append(day)
+                liquid_hist.append(iday)
                 liquid_weights.append(1./n_big_number)
         if history['snow'][iday] is not None:
             for il in range(int(n_big_number*history['snow'][iday]) + 1):  # NOTE this gives you 1./n_big_number instead of zero
-                snow_hist.append(day)
+                snow_hist.append(iday)
                 snow_weights.append(1./n_big_number)
-    ax2.hist(liquid_hist, bins=len(history['days']), range=(history['days'][0]-.6, history['days'][-1]+.4), weights=liquid_weights, rwidth=.5, color=liquid_color, alpha=0.5)
-    ax2.hist(snow_hist, bins=len(history['days']), range=(history['days'][0]-.4, history['days'][-1]+.6), weights=snow_weights, rwidth=.5, color=snow_color, alpha=0.5)
 
-    fighi = ax1.plot(history['days'], history['hi'], color=hi_color, linewidth=5)
-    figlo = ax1.plot(history['days'], history['lo'], color=lo_color, linewidth=5)
+    # date_range = range(history['days'][0], history['days'][0] + len(history['days']))
+    fake_date_range = range(len(history['days']))
+
+    ax2.hist(liquid_hist, bins=len(history['days']), range=(fake_date_range[0]-.6, fake_date_range[-1]+.4), weights=liquid_weights, rwidth=.5, color=liquid_color, alpha=0.5)
+    ax2.hist(snow_hist, bins=len(history['days']), range=(fake_date_range[0]-.4, fake_date_range[-1]+.6), weights=snow_weights, rwidth=.5, color=snow_color, alpha=0.5)
+
+    fighi = ax1.plot(fake_date_range, history['hi'], color=hi_color, linewidth=5)
+    figlo = ax1.plot(fake_date_range, history['lo'], color=lo_color, linewidth=5)
 
     # plt.locator_params(nbins=nxbins, axis='x')
     # plt.locator_params(nbins=nybins, axis='y')
     plt.gcf().subplots_adjust(bottom=0.1, left=0.11, right=0.87, top=0.85)
-    plt.xlim(history['days'][0] - 0.25, history['days'][-1] + 0.25)
+    plt.xlim(fake_date_range[0] - 0.25, fake_date_range[-1] + 0.25)
+    xticklabels = ax2.get_xticks().tolist()
+    assert len(xticklabels) == len(history['days']) + 2
+    for itick in range(1, len(xticklabels)-1):  # first and last are overflow bins or something
+        xticklabels[itick] = history['days'][itick-1]
+    ax2.set_xticklabels(xticklabels)
 
     mintemp = min(t for t in history['lo'] if t is not None)
     maxtemp = max(t for t in history['hi'] if t is not None)
