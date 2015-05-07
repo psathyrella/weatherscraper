@@ -18,6 +18,8 @@ args = parser.parse_args()
 
 # ----------------------------------------------------------------------------------------
 def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
+    # if location_name == 'Kulshan':
+    #     raise AttributeError
     location_info = [('lat', lat), ('lon', lon)]
     params = location_info + [("format", "24 hourly"),
                               ("startDate", start_date.strftime("%Y-%m-%d")),
@@ -39,17 +41,21 @@ def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today()
 # ----------------------------------------------------------------------------------------
 # get forecast for each location
 rows = []
+fails = []
 with open(args.location_fname) as location_file:
     reader = csv.DictReader(filter(lambda row: row[0]!='#', location_file))
     for line in reader:
         print '\n%s:' % line['name']
         args.location = ()
-        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
-        forecast[0] = forecast[0].replace('LOCATION</a>', line['name'] + '</a><br>' + line['elevation'] + ' ft')
-        rows.append(forecast)
+        try:
+            days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
+            forecast[0] = forecast[0].replace('LOCATION</a>', line['name'] + '</a><br>' + line['elevation'] + ' ft')
+            rows.append(forecast)
+        except AttributeError:
+            fails.append(line['name'])
 
 # write html output
-header = ['location<br>(approx. elevation)',]
+header = ['location<br>(approx. elevation)', ]
 if not args.no_history:
     header.append('history')
 htmlcode = HTML.table(rows, header_row=header + days)
@@ -68,5 +74,8 @@ with open(args.outfname, 'w') as outfile:
     outfile.write(HTML.table(sundries, header_row=['<b>sundries</b><br>', ]))
     if not args.no_history:
         outfile.write('<br>Note: "history" is the point forecast archived the day before, i.e. somewhat less than 24 hours in advance, of the indicated date.<br>')
-    outfile.write('<br><br><a href=\"https://github.com/psathyrella/weatherscraper\">github</a>\n')
+    outfile.write('<br><br><a href=\"https://github.com/psathyrella/weatherscraper\">github</a><br><br>')
+    if len(fails) > 0:
+        outfile.write('wget failed (ndfd server getting ddos\'d?) for:<br>')
+        outfile.write('<br>'.join(fails))
     
