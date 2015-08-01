@@ -17,6 +17,10 @@ parser.add_argument('--no-history', action='store_true', help='Don\'t add a colu
 args = parser.parse_args()
 
 # ----------------------------------------------------------------------------------------
+def get_mtf_link(location, elevation):
+    return 'http://www.mountain-forecast.com/peaks/' + location + '/forecasts/' + str(elevation)
+
+# ----------------------------------------------------------------------------------------
 def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
     # if location_name == 'Kulshan':
     #     raise AttributeError
@@ -49,7 +53,10 @@ with open(args.location_fname) as location_file:
         args.location = ()
         try:
             days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
-            forecast[0] = forecast[0].replace('LOCATION</a>', line['name'] + '</a><br>' + line['elevation'] + ' ft')
+            extrastr = line['name'] + '<br>' + line['elevation'] + ' ft <br>'
+            if line['mtwx-location'] != '':
+                extrastr += '<a href="' + get_mtf_link(line['mtwx-location'], line['mtwx-elevation']) + '">mtfcast</a>'
+            forecast[0] = forecast[0].replace('LOCATION', extrastr)
             rows.append(forecast)
         except AttributeError:
             fails.append(line['name'])
@@ -69,7 +76,9 @@ with open(args.outfname, 'w') as outfile:
     outfile.write(htmlcode)
 
     sundries = []
-    sundries.append(['<a href="' + get_mtwx_link('Mount-Waddington', )+ '">Mt Waddington</a>', ])
+    sundries.append(['<a href="' + get_mtf_link('Mount-Waddington', 4016) + '">Waddington</a>', ])
+    sundries.append(['<a href="' + get_mtf_link('Slesse-Peak', 2393) + '">Slesse</a>', ])
+    sundries.append(['<a href="' + get_mtf_link('Serratus-Mountain', 2321) + '">Serratus</a>', ])
     sundries.append(['<a href="http://weather.gc.ca/city/pages/bc-50_metric_e.html">Squamish</a>', ])
     outfile.write(HTML.table(sundries, header_row=['<b>sundries</b><br>', ]))
     if not args.no_history:

@@ -543,6 +543,6 @@ def forecast(args, tree, location_name, htmldir):
     lat, lon = point.get('latitude'), point.get('longitude')
     tv, rowlist = get_html(args, data, location_name, htmldir, debug=True)
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
-    rowlist.insert(0, '<a href="' + point_forecast_url + '">LOCATION</a>')
+    rowlist.insert(0, 'LOCATION <a href="' + point_forecast_url + '">noaa</a>')
 
     return tv['days'], rowlist
