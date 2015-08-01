@@ -69,7 +69,9 @@ with open(args.outfname, 'w') as outfile:
     outfile.write(htmlcode)
 
     sundries = []
-    sundries.append(['<a href="http://www.mountain-forecast.com/peaks/Mount-Waddington/forecasts/3500">Mt Waddington</a>', ])
+    sundries.append(['<a href="http://www.mountain-forecast.com/peaks/Mount-Waddington/forecasts/3500">Mt Waddington 3500m</a>', ])
+    sundries.append(['<a href="http://www.mountain-forecast.com/peaks/Slesse-Peak/forecasts/1500">Slesse 1500m</a>', ])
+    sundries.append(['<a href="http://www.mountain-forecast.com/peaks/Serratus-Mountain/forecasts/1500">Serratus 1500m</a>', ])
     sundries.append(['<a href="http://weather.gc.ca/city/pages/bc-50_metric_e.html">Squamish</a>', ])
     outfile.write(HTML.table(sundries, header_row=['<b>sundries</b><br>', ]))
     if not args.no_history:
