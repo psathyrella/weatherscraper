@@ -69,7 +69,7 @@ with open(args.outfname, 'w') as outfile:
     outfile.write(htmlcode)
 
     sundries = []
-    sundries.append(['<a href="http://www.mountain-forecast.com/peaks/Mount-Waddington/forecasts/3500">Mt Waddington</a>', ])
+    sundries.append(['<a href="' + get_mtwx_link('Mount-Waddington', )+ '">Mt Waddington</a>', ])
     sundries.append(['<a href="http://weather.gc.ca/city/pages/bc-50_metric_e.html">Squamish</a>', ])
     outfile.write(HTML.table(sundries, header_row=['<b>sundries</b><br>', ]))
     if not args.no_history:
@@ -78,4 +78,3 @@ with open(args.outfname, 'w') as outfile:
     if len(fails) > 0:
         outfile.write('wget failed (ndfd server getting ddos\'d?) for:<br>')
         outfile.write('<br>'.join(fails))
-    
