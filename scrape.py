@@ -22,8 +22,6 @@ def get_mtf_link(location, elevation):
 
 # ----------------------------------------------------------------------------------------
 def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
-    # if location_name == 'Kulshan':
-    #     raise AttributeError
     location_info = [('lat', lat), ('lon', lon)]
     params = location_info + [("format", "24 hourly"),
                               ("startDate", start_date.strftime("%Y-%m-%d")),
