@@ -60,7 +60,7 @@ with open(args.location_fname) as location_file:
             fails.append(line['name'])
 
 # write html output
-header = ['location<br>(approx. elevation)', ]
+header = ['location<br>(<a href="https://github.com/psathyrella/weatherscraper/issues/5">approx.</a> elevation)', ]
 if not args.no_history:
     header.append('history')
 htmlcode = HTML.table(rows, header_row=header + days)
