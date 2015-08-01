@@ -1,3 +1,7 @@
+
+# add link to elevation explanation
+# add links to mtwx.com
+
 ## links:
 http://www.atmos.washington.edu/weather/radar.shtml
 http://www.atmos.washington.edu/mm5rt/
