@@ -49,15 +49,21 @@ with open(args.location_fname) as location_file:
     for line in reader:
         print '\n%s:' % line['name']
         args.location = ()
+        n_tries = 0
+        # while n_tries < 3:
+        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
         try:
             days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
-            extrastr = line['name'] + '<br>' + line['elevation'] + ' ft <br>'
+            extrastr = line['name'] + '<br>'
+            extrastr += '<font size="2">' + line['elevation'] + ' ft <br></font>'
             if line['mtwx-location'] != '':
-                extrastr += '<a href="' + get_mtf_link(line['mtwx-location'], line['mtwx-elevation']) + '">mtfcast</a>'
+                extrastr += '<font size="2"><a href="' + get_mtf_link(line['mtwx-location'], line['mtwx-elevation']) + '">mtfcast</a></font>'
             forecast[0] = forecast[0].replace('LOCATION', extrastr)
             rows.append(forecast)
+            break
         except AttributeError:
             fails.append(line['name'])
+        n_tries += 1
 
 # write html output
 header = ['location<br>(<a href="https://github.com/psathyrella/weatherscraper/issues/5">approx.</a> elevation)', ]

@@ -224,7 +224,7 @@ def find_icon_for_time(day, hour, icondata):
             closest_hour = time.hour
             clday = time.day
 
-    # print '  using %s at day %d hour %d' % (closest_icon_url, clday, closest_hour)
+    print '  using %s at day %d hour %d' % (closest_icon_url, clday, closest_hour)
     return closest_icon_url  # can be None
 
 # ----------------------------------------------------------------------------------------
@@ -543,6 +543,6 @@ def forecast(args, tree, location_name, htmldir):
     lat, lon = point.get('latitude'), point.get('longitude')
     tv, rowlist = get_html(args, data, location_name, htmldir, debug=True)
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
-    rowlist.insert(0, 'LOCATION <a href="' + point_forecast_url + '">noaa</a>')
+    rowlist.insert(0, 'LOCATION <font size="2"><a href="' + point_forecast_url + '">noaa</a></font>')
 
     return tv['days'], rowlist
