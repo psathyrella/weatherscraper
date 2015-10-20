@@ -224,7 +224,7 @@ def find_icon_for_time(day, hour, icondata):
             closest_hour = time.hour
             clday = time.day
 
-    print '  using %s at day %d hour %d' % (closest_icon_url, clday, closest_hour)
+    # print '  using %s at day %d hour %d' % (closest_icon_url, clday, closest_hour)
     return closest_icon_url  # can be None
 
 # ----------------------------------------------------------------------------------------
