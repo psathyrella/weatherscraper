@@ -60,7 +60,7 @@ with open(args.location_fname) as location_file:
                 extrastr += '<font size="2"><a href="' + get_mtf_link(line['mtwx-location'], line['mtwx-elevation']) + '">mtfcast</a></font>'
             forecast[0] = forecast[0].replace('LOCATION', extrastr)
             rows.append(forecast)
-            break
+            # break
         except AttributeError:
             fails.append(line['name'])
         n_tries += 1
