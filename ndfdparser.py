@@ -229,7 +229,7 @@ def find_icon_for_time(day, hour, icondata):
 
 # ----------------------------------------------------------------------------------------
 def get_history(history_fname):
-    n_max_days = 5
+    n_max_days = 7
 
     if not os.path.exists(history_fname):
         return None
