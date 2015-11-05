@@ -8,6 +8,7 @@ import urllib
 
 import HTML
 import ndfdparser
+import mtwxparser
 import htmlinfo
 
 parser = argparse.ArgumentParser()
@@ -21,24 +22,30 @@ def get_mtf_link(location, elevation):
     return 'http://www.mountain-forecast.com/peaks/' + location + '/forecasts/' + str(elevation)
 
 # ----------------------------------------------------------------------------------------
-def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
-    location_info = [('lat', lat), ('lon', lon)]
-    params = location_info + [("format", "24 hourly"),
-                              ("startDate", start_date.strftime("%Y-%m-%d")),
-                              ("numDays", str(num_days)),
-                              ("Unit", "m" if metric else "e")]
-    query_string = urllib.urlencode(params)
-    client_type = 'XMLclient'
-    FORECAST_BY_DAY_URL = ("http://www.weather.gov/forecasts/xml"
-                           "/sample_products/browser_interface"
-                           "/ndfd" + client_type + ".php")
-    
-    url = "?".join([FORECAST_BY_DAY_URL, query_string])
-    # print url
-    resp = urllib.urlopen(url)
-    tree = ET.parse(resp)
-    forecast = ndfdparser.forecast(args, tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
-    return forecast
+def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False, mtwx_location=None, mtwx_elevation=None):
+    if mtwx_location is None:
+        location_info = [('lat', lat), ('lon', lon)]
+        params = location_info + [("format", "24 hourly"),
+                                  ("startDate", start_date.strftime("%Y-%m-%d")),
+                                  ("numDays", str(num_days)),
+                                  ("Unit", "m" if metric else "e")]
+        query_string = urllib.urlencode(params)
+        client_type = 'XMLclient'
+        FORECAST_BY_DAY_URL = ("http://www.weather.gov/forecasts/xml"
+                               "/sample_products/browser_interface"
+                               "/ndfd" + client_type + ".php")
+        
+        url = "?".join([FORECAST_BY_DAY_URL, query_string])
+        # print url
+        resp = urllib.urlopen(url)
+        tree = ET.parse(resp)
+        forecast = ndfdparser.forecast(args, tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+        return forecast
+    else:
+        url = get_mtf_link(mtwx_location, mtwx_elevation)
+        resp = urllib.urlopen(url)
+        tree = ET.parse(resp)
+        forecast = mtwxparser.forecast(args, tree)
 
 # ----------------------------------------------------------------------------------------
 # get forecast for each location
@@ -51,9 +58,9 @@ with open(args.location_fname) as location_file:
         args.location = ()
         n_tries = 0
         # while n_tries < 3:
-        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
+        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], , line['mtwx-elevation'])
         try:
-            days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'])
+            days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], , line['mtwx-elevation']))
             extrastr = line['name'] + '<br>'
             extrastr += '<font size="2">' + line['elevation'] + ' ft <br></font>'
             if line['mtwx-location'] != '':
