@@ -4,7 +4,9 @@ import argparse
 import os
 import datetime
 from xml.etree import ElementTree as ET
+from lxml import etree
 import urllib
+import sys
 
 import HTML
 import ndfdparser
@@ -22,7 +24,7 @@ def get_mtf_link(location, elevation):
     return 'http://www.mountain-forecast.com/peaks/' + location + '/forecasts/' + str(elevation)
 
 # ----------------------------------------------------------------------------------------
-def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False, mtwx_location=None, mtwx_elevation=None):
+def get_forecast(args, location_name, lat, lon, mtwx_location=None, mtwx_elevation=None, start_date=datetime.date.today(), num_days=6, metric=False):
     if mtwx_location is None:
         location_info = [('lat', lat), ('lon', lon)]
         params = location_info + [("format", "24 hourly"),
@@ -42,10 +44,11 @@ def get_forecast(args, location_name, lat, lon, start_date=datetime.date.today()
         forecast = ndfdparser.forecast(args, tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
         return forecast
     else:
-        url = get_mtf_link(mtwx_location, mtwx_elevation)
-        resp = urllib.urlopen(url)
-        tree = ET.parse(resp)
-        forecast = mtwxparser.forecast(args, tree)
+        # url = get_mtf_link(mtwx_location, mtwx_elevation)
+        parser = etree.HTMLParser()
+        # tree = etree.parse(url, parser)
+        tree = etree.parse('tmp.html', parser)
+        forecast = mtwxparser.forecast(args, tree, num_days=num_days)
 
 # ----------------------------------------------------------------------------------------
 # get forecast for each location
@@ -58,9 +61,9 @@ with open(args.location_fname) as location_file:
         args.location = ()
         n_tries = 0
         # while n_tries < 3:
-        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], , line['mtwx-elevation'])
+        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], line['mtwx-elevation'])
         try:
-            days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], , line['mtwx-elevation']))
+            days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], line['mtwx-elevation'])
             extrastr = line['name'] + '<br>'
             extrastr += '<font size="2">' + line['elevation'] + ' ft <br></font>'
             if line['mtwx-location'] != '':
