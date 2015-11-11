@@ -139,14 +139,14 @@ def parse_simple(name, tr, data, expected_units):
 
 # ----------------------------------------------------------------------------------------
 def ascii(data):
-    print '%-5s          %4s   %5s%5s' % ('', 'hi lo', 'snow    rain ', 'wind')
+    print '%-5s          %5s     %5s   %5s  %5s' % ('', 'hi lo', 'snow (ft)', 'rain (in)', 'wind')
     for fcast in data:
         time = fcast['time-of-day']
         if time == 'AM':
             time = ('%-5s' % weekdays[fcast['date'].weekday()]) + '  ' + time
         else:
             time = '       ' + time
-        print '%-12s %4.0f %-3.0f  %5.2f %5s   %5.1f' % (time, fcast['high'], fcast['low'], fcast['snow'], fcast['rain'], fcast['wind-speed'])
+        print '%-12s %4.0f %-3.0f     %5.2f     %5s       %5.1f' % (time, fcast['high'], fcast['low'], fcast['snow'], fcast['rain'], fcast['wind-speed'])
 
 # ----------------------------------------------------------------------------------------
 def combine_times_of_day(fcast):
@@ -180,7 +180,7 @@ def combine_times_of_day(fcast):
         if fcast[itod]['low'] < daily_fcast['low']:
             daily_fcast['low'] = fcast[itod]['low']
 
-        return daily_fcast
+    return daily_fcast
 
 # ----------------------------------------------------------------------------------------
 def combine_all_times_of_day(forecasts):
@@ -239,7 +239,7 @@ def read_and_write_history(history_fname, todaysdata):
         valdict = {}
         for k, v in values.items():
             if k != 'month' and k != 'day' and k != 'year':
-                valdict[k] = v
+                valdict[k] = float(v)  # we can leave these as strings earlier 'cause we're just writing them straight back into the file
         valdict['date'] = date
         history_list.append(valdict)
     return history_list
