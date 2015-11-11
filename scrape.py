@@ -25,15 +25,15 @@ def get_mtf_link(location, elevation):
 
 # ----------------------------------------------------------------------------------------
 def get_forecast(args, location_name, lat, lon, mtwx_location=None, mtwx_elevation=None, start_date=datetime.date.today(), num_days=6, metric=False):
-    # if mtwx_location != '':
-    #     assert mtwx_location is not None
-    #     url = get_mtf_link(mtwx_location, mtwx_elevation)
-    #     parser = etree.HTMLParser()
-    #     # tree = etree.parse(url, parser)
-    #     tree = etree.parse('tmp.html', parser)
-    #     forecast = mtwxparser.forecast(args, tree, location_name=location_name, mtfcast_name=mtwx_location, elevation=mtwx_elevation, num_days=num_days, history_dir=os.path.dirname(os.path.abspath(args.outfname)) + '/history/mtfcast', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+    if mtwx_location != '':
+        assert mtwx_location is not None
+        url = get_mtf_link(mtwx_location, mtwx_elevation)
+        parser = etree.HTMLParser()
+        # tree = etree.parse(url, parser)
+        tree = etree.parse('tmp.html', parser)
+        forecast = mtwxparser.forecast(args, tree, location_name=location_name, mtfcast_name=mtwx_location, elevation=mtwx_elevation, num_days=num_days, history_dir=os.path.dirname(os.path.abspath(args.outfname)) + '/history/mtfcast', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
 
-    # sys.exit()
+    sys.exit()
     location_info = [('lat', lat), ('lon', lon)]
     params = location_info + [("format", "24 hourly"),
                               ("startDate", start_date.strftime("%Y-%m-%d")),
@@ -63,7 +63,7 @@ with open(args.location_fname) as location_file:
         args.location = ()
         n_tries = 0
         # while n_tries < 3:
-        # days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], line['mtwx-elevation'])
+        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], line['mtwx-elevation'])
         try:
             days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], line['mtwx-elevation'])
             extrastr = line['name'] + '<br>'

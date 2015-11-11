@@ -2,6 +2,7 @@ import os
 import sys
 import math
 import numpy
+from datetime import datetime
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -156,7 +157,7 @@ def make_mtfcast_plot(args, location_name, location_title, elevation, plotdir, f
     })
 
     fig, ax1 = plt.subplots()
-    fig.set_size_inches(15, 5)
+    fig.set_size_inches(19, 5)
     lo_color = '#99B2FF'
     hi_color = 'red'
     # plt.locator_params(nbins=nxbins, axis='x')
@@ -170,38 +171,64 @@ def make_mtfcast_plot(args, location_name, location_title, elevation, plotdir, f
     tomorrowcast = forecasts[3:6]
 
     combined_forecasts = history + todaycast + tomorrowcast + daily_forecasts[2:]
-    ifc = 0
-    for fc in combined_forecasts:
-        print '%3d  %s' % (ifc, fc['date'].day)
-        ifc += 1
 
     rain_hist, rain_weights = make_hists(combined_forecasts, 'rain')
     snow_hist, snow_weights = make_hists(combined_forecasts, 'snow')
 
-    # daily_forecasts_after_tomorrow = daily_forecasts[2:]  # remove today and tomorrow
     fake_date_range = range(len(combined_forecasts))
+
+    # daily_forecasts_after_tomorrow = daily_forecasts[2:]  # remove today and tomorrow
     ax2.hist(rain_hist, bins=len(combined_forecasts), range=(fake_date_range[0]-.6, fake_date_range[-1]+.4), weights=rain_weights, rwidth=.5, color=rain_color, alpha=0.5)
     ax2.hist(snow_hist, bins=len(combined_forecasts), range=(fake_date_range[0]-.4, fake_date_range[-1]+.6), weights=snow_weights, rwidth=.5, color=snow_color, alpha=0.5)
 
-    fighi = ax1.plot(fake_date_range, [float(fc['high']) for fc in combined_forecasts], color=hi_color, linewidth=5)
-    figlo = ax1.plot(fake_date_range, [float(fc['low']) for fc in combined_forecasts], color=lo_color, linewidth=5)
+    fighi = ax1.plot(fake_date_range, [fc['high'] for fc in combined_forecasts], color=hi_color, linewidth=5)
+    figlo = ax1.plot(fake_date_range, [fc['low'] for fc in combined_forecasts], color=lo_color, linewidth=5)
 
     plt.gcf().subplots_adjust(bottom=0.1, left=0.11, right=0.87, top=0.85)
     plt.xlim(fake_date_range[0] - 0.25, fake_date_range[-1] + 0.25)
-    # ax2.xticks(numpy.arange(1, len(combined_forecasts), 3.0))
-    plt.xticks(range(1, len(combined_forecasts), 3))
-    xticklabels = ax2.get_xticks().tolist()
-    # assert len(xticklabels) == len(combined_forecasts) / 3
-    for itick in range(len(xticklabels)):
-        xticklabels[itick] = weekdays[combined_forecasts[itick*3]['date'].weekday()]
-    # xticklabels[0] = 'today'
-    # ax2.set_xticklabels(xticklabels)
 
-    mintemp = min(t for t in [float(fc['low']) for fc in combined_forecasts] if t is not None)
-    maxtemp = max(t for t in [float(fc['high']) for fc in combined_forecasts] if t is not None)
-    minprecip = min(p for p in [float(fc['rain']) + float(fc['snow']) for fc in combined_forecasts])  # snow's already been converted to feet
-    maxprecip = max(p for p in [float(fc['rain']) + float(fc['snow']) for fc in combined_forecasts])
-    print 'TODO convert these to floats earlier'
+    # # ax2.xticks(numpy.arange(1, len(combined_forecasts), 3.0))
+    # plt.xticks(range(1, len(combined_forecasts), 3))
+    # xticklabels = ax2.get_xticks().tolist()
+    # # assert len(xticklabels) == len(combined_forecasts) / 3
+    # for itick in range(len(xticklabels)):
+    #     xticklabels[itick] = weekdays[combined_forecasts[itick*3]['date'].weekday()]
+    # # xticklabels[0] = 'today'
+
+    xticks, xticklabels = [], []
+    now = datetime.now()
+    for ifc in fake_date_range:
+        fc = combined_forecasts[ifc]
+        print '%3d  %s    %.2f' % (ifc, fc['date'].day, fc['snow'])
+        xticks.append(ifc)
+        # xticklabels.append(str(fc['date'].day))
+        if fc['date'].year == now.year and fc['date'].month == now.month and fc['date'].day == now.day:  # today
+            if fc['time-of-day'] == 'AM':
+                label = ''
+            elif fc['time-of-day'] == 'PM':
+                label = 'today'
+            elif fc['time-of-day'] == 'night':
+                label = ''
+        elif fc['date'].year == now.year and fc['date'].month == now.month and fc['date'].day == now.day + 1:  # tomorrow
+            if fc['time-of-day'] == 'AM':
+                label = ''
+            elif fc['time-of-day'] == 'PM':
+                label = weekdays[fc['date'].weekday()]
+            elif fc['time-of-day'] == 'night':
+                label = ''
+            else:
+                assert False
+        else:
+            label = weekdays[fc['date'].weekday()]
+        xticklabels.append(label)
+
+    plt.xticks(xticks)
+    ax2.set_xticklabels(xticklabels)
+
+    mintemp = min(t for t in [fc['low'] for fc in combined_forecasts] if t is not None)
+    maxtemp = max(t for t in [fc['high'] for fc in combined_forecasts] if t is not None)
+    minprecip = min(p for p in [fc['rain'] + fc['snow'] for fc in combined_forecasts])  # snow's already been converted to feet
+    maxprecip = max(p for p in [fc['rain'] + fc['snow'] for fc in combined_forecasts])
 
     modulo = 5.
     mintemp = int(math.floor(mintemp / modulo)) * modulo
