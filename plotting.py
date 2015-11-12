@@ -8,7 +8,7 @@ import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
 
-weekdays = ('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')
+import utils
 
 # ----------------------------------------------------------------------------------------
 def make_noaa_plot(args, location_name, htmldir, history):
@@ -151,18 +151,33 @@ def make_mtfcast_plot(args, location_name, location_title, elevation, plotdir, f
         'legend.fontsize': fsize,
         'axes.titlesize': fsize,
         # 'axes.labelsize': fsize,
-        'xtick.labelsize': fsize,
-        'ytick.labelsize': fsize,
+        'xtick.labelsize': 0.9*fsize,
+        'ytick.labelsize': 0.8*fsize,
         'axes.labelsize': fsize
     })
 
-    fig, ax1 = plt.subplots()
-    fig.set_size_inches(19, 5)
+    from matplotlib import gridspec
+    # fig, axes = plt.subplots(nrows=2, height_ratios=[1,3])
+    # ax1 = axes[1]
+    fig = plt.figure()
+    height_ratios = 4
+    gs = gridspec.GridSpec(2, 1, height_ratios=[1, height_ratios]) 
+    gs.update(hspace=0.05) # set the spacing between axes. 
+    axwind = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+    # ax1 = plt.subplot(gs[1])
+
+    total_width = 25
+    total_height = 8.5
+    fig.set_size_inches(total_width, total_height)
     lo_color = '#99B2FF'
     hi_color = 'red'
+    wind_color = 'green'
     # plt.locator_params(nbins=nxbins, axis='x')
     # plt.locator_params(nbins=nybins, axis='y')
 
+    # ----------------------------------------------------------------------------------------
+    # temp and precip
     ax2 = ax1.twinx()
     rain_color = '#1947D1'
     snow_color = 'grey'
@@ -184,28 +199,26 @@ def make_mtfcast_plot(args, location_name, location_title, elevation, plotdir, f
     fighi = ax1.plot(fake_date_range, [fc['high'] for fc in combined_forecasts], color=hi_color, linewidth=5)
     figlo = ax1.plot(fake_date_range, [fc['low'] for fc in combined_forecasts], color=lo_color, linewidth=5)
 
-    plt.gcf().subplots_adjust(bottom=0.1, left=0.11, right=0.87, top=0.85)
+    plt.gcf().subplots_adjust(bottom=0.1, left=0.05, right=0.93, top=0.92)
     plt.xlim(fake_date_range[0] - 0.25, fake_date_range[-1] + 0.25)
-
-    # # ax2.xticks(numpy.arange(1, len(combined_forecasts), 3.0))
-    # plt.xticks(range(1, len(combined_forecasts), 3))
-    # xticklabels = ax2.get_xticks().tolist()
-    # # assert len(xticklabels) == len(combined_forecasts) / 3
-    # for itick in range(len(xticklabels)):
-    #     xticklabels[itick] = weekdays[combined_forecasts[itick*3]['date'].weekday()]
-    # # xticklabels[0] = 'today'
 
     xticks, xticklabels = [], []
     now = datetime.now()
+    itoday = None
     for ifc in fake_date_range:
         fc = combined_forecasts[ifc]
-        print '%3d  %s    %.2f' % (ifc, fc['date'].day, fc['snow'])
+        print '%4d  %5s    %8.2f   %8.1f' % (ifc, fc['date'].day, fc['snow'], fc['wind-speed'])
         xticks.append(ifc)
-        # xticklabels.append(str(fc['date'].day))
-        if fc['date'].year == now.year and fc['date'].month == now.month and fc['date'].day == now.day:  # today
+        if ifc < len(history):
+            if ifc == int(len(history) / 2) - 1:  # near the middle of the history
+                label = 'last %d days' % len(history)
+            else:
+                label = ''
+        elif fc['date'].year == now.year and fc['date'].month == now.month and fc['date'].day == now.day:  # today
             if fc['time-of-day'] == 'AM':
                 label = ''
             elif fc['time-of-day'] == 'PM':
+                itoday = ifc
                 label = 'today'
             elif fc['time-of-day'] == 'night':
                 label = ''
@@ -213,13 +226,13 @@ def make_mtfcast_plot(args, location_name, location_title, elevation, plotdir, f
             if fc['time-of-day'] == 'AM':
                 label = ''
             elif fc['time-of-day'] == 'PM':
-                label = weekdays[fc['date'].weekday()]
+                label = utils.weekdays[fc['date'].weekday()]
             elif fc['time-of-day'] == 'night':
                 label = ''
             else:
                 assert False
         else:
-            label = weekdays[fc['date'].weekday()]
+            label = utils.weekdays[fc['date'].weekday()]
         xticklabels.append(label)
 
     plt.xticks(xticks)
@@ -252,18 +265,52 @@ def make_mtfcast_plot(args, location_name, location_title, elevation, plotdir, f
         ax2.yaxis.set_ticks([minprecip, minprecip + 0.5*(maxprecip-minprecip), maxprecip])
         ax2.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%.2f'))
 
+    # lines emphasizing location of today and tomorrow
+    ax1.plot([itoday - 1.5, itoday - 1.5], [mintemp, 0.9*maxtemp], color='black', linestyle='--', linewidth=3)
+    ax1.plot([itoday + 1.5, itoday + 1.5], [mintemp, 0.9*maxtemp], color='black', linestyle='--', linewidth=3)
+    ax1.plot([itoday + 4.5, itoday + 4.5], [mintemp, 0.9*maxtemp], color='black', linestyle='--', linewidth=3)
+
     ax1.spines['top'].set_visible(False)
     ax1.get_xaxis().tick_bottom()
 
-    fig.text(0.935, 0.7, 'in.', color=rain_color, fontsize=20, alpha=0.5)
-    fig.text(0.965, 0.7, 'ft.', color=snow_color, fontsize=20, alpha=0.5)
-    fig.text(0.003, 0.7, 'deg F', color='black', fontsize=20)
-    fig.text(0.02, 0.35, 'hi', color=hi_color, fontsize=20)
-    fig.text(0.02, 0.3, 'lo', color=lo_color, fontsize=20)
-    fig.text(0.942, 0.35, 'rain', color=rain_color, fontsize=20, alpha=0.5)
-    fig.text(0.938, 0.3, 'snow', color=snow_color, fontsize=20, alpha=0.5)
+    fig.text(0.935, 0.63, 'rain (in.)', color=rain_color, fontsize=20, alpha=0.5)
+    fig.text(0.935, 0.58, 'snow (ft.)', color=snow_color, fontsize=20, alpha=0.5)
+    fig.text(0.004, 0.6, 'deg F', color='black', fontsize=20)
+    fig.text(0.02, 0.32, 'hi', color=hi_color, fontsize=20)
+    fig.text(0.02, 0.27, 'lo', color=lo_color, fontsize=20)
     plt.suptitle(location_title + '   (' + str(elevation) + ' ft)', fontsize=20)
 
+    # ----------------------------------------------------------------------------------------
+    # wind
+    max_wind = 50
+    # ax3 = ax1.twinx()
+    # figwind = ax3.plot(fake_date_range, [min(fc['wind-speed'], max_wind) for fc in combined_forecasts], color=wind_color, linewidth=5, linestyle='-')
+    # ax3.set_axis_off()
+    # fig.text(0.01, 0.05, '0', color=wind_color, fontsize=30)
+    # fig.text(0.01, 0.8, 'mph', color=wind_color, fontsize=30)
+
+    axwind.set_xlim(0., 1.)
+    axwind.set_ylim(-0.5, 0.5)
+    xwidth = 1. / len(combined_forecasts)  # distance between forecasts
+    for ifc in fake_date_range:
+        fc = combined_forecasts[ifc]
+        xpos = 0.5 * xwidth + float(ifc) / len(combined_forecasts)  # center of this forecast
+        arrow_length = 0.9 * xwidth * fc['wind-speed'] / max_wind
+        # slope = float(ifc) / len(combined_forecasts)
+        # theta = math.atan(slope)
+        theta = fc['wind-direction']  #2 * math.pi * float(ifc) / len(combined_forecasts)
+        dx = arrow_length * math.cos(theta)
+        dy = (total_width / total_height) * height_ratios * arrow_length * math.sin(theta)
+        # print xpos, theta, dx, dy
+        # axwind.arrow(xpos, 0., dx, dy)  #, head_width=0.05, head_length=0.1, fc='k', ec='k')
+        axwind.plot([xpos - dx/2, xpos + dx/2], [0. - dy/2, dy/2], linewidth=12, color=wind_color)
+        axwind.plot(xpos + dx/2, 0. + dy/2, marker=(3, 0, theta * 180. / math.pi - 90.), markersize=28, linestyle='None', color=wind_color)
+        # axwind.text(xpos, 0., utils.wind_angles[utils.wind_directions.index(fc['wind-direction'])], color=wind_color, fontsize=20)
+        axwind.text(xpos, -.4, '%.0f' % fc['wind-speed'], color=wind_color, fontsize=20)
+    axwind.set_axis_off()
+    axwind.text(-.03, -.3, 'mph', color=wind_color, fontsize=20)
+
+    # ----------------------------------------------------------------------------------------
     plt.savefig(plotdir + '/' + location_name + '.png')
     # return plotfname.replace(htmldir + '/', '')
 
