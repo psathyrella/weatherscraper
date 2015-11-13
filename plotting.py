@@ -7,6 +7,7 @@ import datetime
 import matplotlib as mpl
 mpl.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 
 import utils
 
@@ -21,7 +22,7 @@ def make_wind_plot(axwind, combined_forecasts, fake_date_range, total_width, tot
         arrow_length = 0.9 * xwidth * fc['wind-speed'] / max_wind
         # slope = float(ifc) / len(combined_forecasts)
         # theta = math.atan(slope)
-        theta = fc['wind-direction']  #2 * math.pi * float(ifc) / len(combined_forecasts)
+        theta = fc['wind-direction'] if fc['wind-direction'] is not None else math.pi / 2  #2 * math.pi * float(ifc) / len(combined_forecasts)
         dx = arrow_length * math.cos(theta)
         dy = (total_width / total_height) * height_ratios * arrow_length * math.sin(theta)
         # print xpos, theta, dx, dy
@@ -34,7 +35,7 @@ def make_wind_plot(axwind, combined_forecasts, fake_date_range, total_width, tot
     axwind.text(-.03, -.3, 'mph', color=wind_color, fontsize=20)
 
 # ----------------------------------------------------------------------------------------
-def make_combined_noaa_plot(args, location_name, htmldir, history, todays_forecast, forecasts):
+def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, todays_forecast, forecasts):
     if not os.path.exists(htmldir + '/noaa'):
         os.makedirs(htmldir + '/noaa')
 
@@ -55,8 +56,18 @@ def make_combined_noaa_plot(args, location_name, htmldir, history, todays_foreca
         'axes.labelsize': fsize
     })
 
-    fig, ax1 = plt.subplots()
-    fig.set_size_inches(25, 5)
+
+    fig = plt.figure()
+    height_ratios = 4
+    gs = gridspec.GridSpec(2, 1, height_ratios=[1, height_ratios]) 
+    gs.update(hspace=0.05) # set the spacing between axes. 
+    axwind = plt.subplot(gs[0])
+    ax1 = plt.subplot(gs[1])
+
+    total_width = 25
+    total_height = 8.5
+    fig.set_size_inches(total_width, total_height)
+
     lo_color = '#99B2FF'
     hi_color = 'red'
     # plt.locator_params(nbins=nxbins, axis='x')
@@ -164,7 +175,13 @@ def make_combined_noaa_plot(args, location_name, htmldir, history, todays_foreca
     fig.text(0.02, 0.3, 'lo', color=lo_color, fontsize=20)
     fig.text(0.87, 0.35, 'precip', color=liquid_color, fontsize=20, alpha=0.5)
     fig.text(0.88, 0.3, 'snow', color=snow_color, fontsize=20, alpha=0.5)
-    plt.suptitle(location_name, fontsize=20)
+    plt.suptitle(location_name + '   (' + str(int(round(elevation, -2))) + ' ft)', fontsize=20)
+
+    forecasts_for_wind = []
+    wind_color = 'green'
+    for iday in range(len(combined_forecasts['dates'])):
+        forecasts_for_wind.append({'wind-speed' : combined_forecasts['wind'][iday], 'wind-direction' : None})
+    make_wind_plot(axwind, forecasts_for_wind, fake_date_range, total_width, total_height, height_ratios, wind_color)
 
     plotfname = htmldir + '/noaa/' + location_name + '.png'
     plt.savefig(plotfname)
@@ -202,7 +219,6 @@ def make_mtfcast_plot(args, location_name, location_title, elevation, plotdir, f
         'axes.labelsize': fsize
     })
 
-    from matplotlib import gridspec
     # fig, axes = plt.subplots(nrows=2, height_ratios=[1,3])
     # ax1 = axes[1]
     fig = plt.figure()

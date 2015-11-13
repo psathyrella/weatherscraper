@@ -490,6 +490,8 @@ def combine_data_for_plotting(history_data, tv, todays_history):
     for var in tv:
         if var in tvnames:
             forecasts[good_names[tvnames.index(var)]] = [float(val) if val != '-' and val != '' else None for val in tv[var]]
+            if var == 'snow':  # convert to feet
+                forecasts[good_names[tvnames.index(var)]] = [val / 12. if val is not None else None for val in forecasts[good_names[tvnames.index(var)]]]
         elif var == 'dates':
             forecasts[var] = [val for val in tv[var]]
         elif var == 'cloud':
@@ -503,7 +505,7 @@ def combine_data_for_plotting(history_data, tv, todays_history):
     return todays_forecast, forecasts
 
 # ----------------------------------------------------------------------------------------
-def forecast(args, tree, location_name, htmldir):
+def forecast(args, tree, location_name, elevation, htmldir):
     root = tree.getroot()
     time_layouts = get_time_layouts(root)
     data = parse_data(root, time_layouts)
@@ -518,6 +520,6 @@ def forecast(args, tree, location_name, htmldir):
     # print '---'
     todays_history = get_todays_forecast_from_history(htmldir + '/history/' + location_name + '.csv')
     todays_forecast, forecasts = combine_data_for_plotting(history_data, tv, todays_history)
-    combined_plotname = plotting.make_combined_noaa_plot(args, location_name, htmldir, history_data, todays_forecast, forecasts)
+    combined_plotname = plotting.make_combined_noaa_plot(args, location_name, elevation, htmldir, history_data, todays_forecast, forecasts)
 
     return tv['days'], rowlist

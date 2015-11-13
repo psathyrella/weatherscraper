@@ -34,7 +34,7 @@ def get_mtfcast(args, location_name, location_title, elevation, num_days=6, metr
     forecast = mtp.forecast(args, tree, location_name, location_title, elevation, num_days=num_days, history_dir=os.path.dirname(os.path.abspath(args.outfname)) + '/history/mtfcast', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
 
 # ----------------------------------------------------------------------------------------
-def get_noaa_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
+def get_noaa_forecast(args, location_name, elevation, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
     location_info = [('lat', lat), ('lon', lon)]
     params = location_info + [("format", "24 hourly"),
                               ("startDate", start_date.strftime("%Y-%m-%d")),
@@ -56,7 +56,7 @@ def get_noaa_forecast(args, location_name, lat, lon, start_date=datetime.date.to
     #     tmpfile.write(xmlstr)
     # sys.exit()
 
-    forecast = ndfdparser.forecast(args, tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+    forecast = ndfdparser.forecast(args, tree, location_name, elevation, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
 
 # ----------------------------------------------------------------------------------------
@@ -78,9 +78,9 @@ with open(args.location_fname) as location_file:
         args.location = ()  # TODO not sure why I do this
         n_tries = 0
         # while n_tries < 3:
-        days, forecast = get_noaa_forecast(args, line['name'], line['lat'], line['lon'])
+        days, forecast = get_noaa_forecast(args, line['name'], float(line['elevation']), line['lat'], line['lon'])
         try:
-            # days, forecast = get_noaa_forecast(args, line['name'], line['lat'], line['lon'])
+            # days, forecast = get_noaa_forecast(args, line['name'], float(line['elevation']), line['lat'], line['lon'])
             extrastr = line['name'] + '<br>'
             extrastr += '<font size="2">' + line['elevation'] + ' ft <br></font>'
             if line['mtwx-location'] != '':
