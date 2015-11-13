@@ -15,6 +15,7 @@ import htmlinfo
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--location-fname', default='all-locations.csv')
+parser.add_argument('--mtfcast-location-fname', default='mtfcast-locations.csv')
 parser.add_argument('--outfname', required=True)
 parser.add_argument('--no-history', action='store_true', help='Don\'t add a column with history plot (still caches current forecast even if true)')
 args = parser.parse_args()
@@ -24,17 +25,16 @@ def get_mtf_link(location, elevation):
     return 'http://www.mountain-forecast.com/peaks/' + location + '/forecasts/' + str(elevation)
 
 # ----------------------------------------------------------------------------------------
-def get_forecast(args, location_name, lat, lon, mtwx_location=None, mtwx_elevation=None, start_date=datetime.date.today(), num_days=6, metric=False):
-    if mtwx_location != '':
-        assert mtwx_location is not None
-        url = get_mtf_link(mtwx_location, mtwx_elevation)
-        parser = etree.HTMLParser()
-        # tree = etree.parse(url, parser)
-        tree = etree.parse('tmp.html', parser)
-        mtp = mtwxparser.mtwxparser()
-        forecast = mtp.forecast(args, tree, location_name=location_name, mtfcast_name=mtwx_location, elevation=mtwx_elevation, num_days=num_days, history_dir=os.path.dirname(os.path.abspath(args.outfname)) + '/history/mtfcast', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+def get_mtfcast(args, location_name, location_title, elevation, num_days=6, metric=False):
+    url = get_mtf_link(location_name, elevation)
+    parser = etree.HTMLParser()
+    tree = etree.parse(url, parser)
+    # tree = etree.parse('tmp.html', parser)
+    mtp = mtwxparser.mtwxparser()
+    forecast = mtp.forecast(args, tree, location_name, location_title, elevation, num_days=num_days, history_dir=os.path.dirname(os.path.abspath(args.outfname)) + '/history/mtfcast', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
 
-    sys.exit()
+# ----------------------------------------------------------------------------------------
+def get_noaa_forecast(args, location_name, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
     location_info = [('lat', lat), ('lon', lon)]
     params = location_info + [("format", "24 hourly"),
                               ("startDate", start_date.strftime("%Y-%m-%d")),
@@ -47,26 +47,40 @@ def get_forecast(args, location_name, lat, lon, mtwx_location=None, mtwx_elevati
                            "/ndfd" + client_type + ".php")
     
     url = "?".join([FORECAST_BY_DAY_URL, query_string])
-    # print url
-    resp = urllib.urlopen(url)
-    tree = ET.parse(resp)
+    # resp = urllib.urlopen(url)
+    # tree = ET.parse(resp)
+    tree = ET.parse('tmp-noaa.xml')
+
+    # xmlstr = ET.tostring(tree.getroot())
+    # with open('tmp-noaa.xml', 'w') as tmpfile:
+    #     tmpfile.write(xmlstr)
+    # sys.exit()
+
     forecast = ndfdparser.forecast(args, tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
 
+# # ----------------------------------------------------------------------------------------
+# # mountain-forecast.com
+# with open(args.mtfcast_location_fname) as mtfcast_location_file:
+#     reader = csv.DictReader(filter(lambda row: row[0]!='#', mtfcast_location_file))
+#     for line in reader:
+#         print '\n%s:' % line['name']
+#         get_mtfcast(args, line['name'], line['title'], line['elevation'])
+
 # ----------------------------------------------------------------------------------------
-# get forecast for each location
+# noaa forecast
 rows = []
 fails = []
 with open(args.location_fname) as location_file:
     reader = csv.DictReader(filter(lambda row: row[0]!='#', location_file))
     for line in reader:
         print '\n%s:' % line['name']
-        args.location = ()
+        args.location = ()  # TODO not sure why I do this
         n_tries = 0
         # while n_tries < 3:
-        days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], line['mtwx-elevation'])
+        days, forecast = get_noaa_forecast(args, line['name'], line['lat'], line['lon'])
         try:
-            days, forecast = get_forecast(args, line['name'], line['lat'], line['lon'], line['mtwx-location'], line['mtwx-elevation'])
+            # days, forecast = get_noaa_forecast(args, line['name'], line['lat'], line['lon'])
             extrastr = line['name'] + '<br>'
             extrastr += '<font size="2">' + line['elevation'] + ' ft <br></font>'
             if line['mtwx-location'] != '':

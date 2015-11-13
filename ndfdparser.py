@@ -306,7 +306,7 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
     rowlist = []
 
     history_data = get_history(htmldir + '/history/' + location_name + '.csv')
-    history_plotname = plotting.make_noaa_plot(args, location_name, htmldir, history_data)
+    history_plotname = plotting.make_noaa_history_plot(args, location_name, htmldir, history_data)
     if args.no_history:
         pass
     elif history_plotname is None:
@@ -414,7 +414,11 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
         if debug:
             print '%-6s %4s %-3s  %5s  %5s %5s   %5s  %5s' % (weekdays[day.weekday()], tv['tmax'][-1], tv['tmin'][-1], tv['liquid'][-1], tv['snow'][-1], tv['precip'][-1], tv['wind'][-1], tv['cloud'][-1])
 
-    return tv, rowlist
+    return tv, rowlist, history_data
+
+# ----------------------------------------------------------------------------------------
+def combine_data_for_plotting(tv):
+    print tv
 
 # ----------------------------------------------------------------------------------------
 def forecast(args, tree, location_name, htmldir):
@@ -423,8 +427,11 @@ def forecast(args, tree, location_name, htmldir):
     data = parse_data(root, time_layouts)
     point = root.find('data').find('location').find('point')
     lat, lon = point.get('latitude'), point.get('longitude')
-    tv, rowlist = get_html(args, data, location_name, htmldir, debug=True)
+    tv, rowlist, history_data = get_html(args, data, location_name, htmldir, debug=True)
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
     rowlist.insert(0, 'LOCATION <font size="2"><a href="' + point_forecast_url + '">noaa</a></font>')
+
+    combine_data_for_plotting(tv)
+    combined_plotname = plotting.make_combined_noaa_plot(args, location_name, htmldir, history_data)
 
     return tv['days'], rowlist
