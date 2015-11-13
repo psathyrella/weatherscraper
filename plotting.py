@@ -10,6 +10,29 @@ import matplotlib.pyplot as plt
 
 import utils
 
+def make_wind_plot(axwind, combined_forecasts, fake_date_range, total_width, total_height, height_ratios, wind_color):
+    max_wind = 60  # NOTE this doesn't saturate when you get this high, it's just that the arrow starts overflowing its allotted space
+    axwind.set_xlim(0., 1.)
+    axwind.set_ylim(-0.5, 0.5)
+    xwidth = 1. / len(combined_forecasts)  # distance between forecasts
+    for ifc in fake_date_range:
+        fc = combined_forecasts[ifc]
+        xpos = 0.5 * xwidth + float(ifc) / len(combined_forecasts)  # center of this forecast
+        arrow_length = 0.9 * xwidth * fc['wind-speed'] / max_wind
+        # slope = float(ifc) / len(combined_forecasts)
+        # theta = math.atan(slope)
+        theta = fc['wind-direction']  #2 * math.pi * float(ifc) / len(combined_forecasts)
+        dx = arrow_length * math.cos(theta)
+        dy = (total_width / total_height) * height_ratios * arrow_length * math.sin(theta)
+        # print xpos, theta, dx, dy
+        # axwind.arrow(xpos, 0., dx, dy)  #, head_width=0.05, head_length=0.1, fc='k', ec='k')
+        axwind.plot([xpos - dx/2, xpos + dx/2], [0. - dy/2, dy/2], linewidth=12, color=wind_color)
+        axwind.plot(xpos + dx/2, 0. + dy/2, marker=(3, 0, theta * 180. / math.pi - 90.), markersize=28, linestyle='None', color=wind_color)
+        # axwind.text(xpos, 0., utils.wind_angles[utils.wind_directions.index(fc['wind-direction'])], color=wind_color, fontsize=20)
+        axwind.text(xpos, -.4, '%.0f' % round(fc['wind-speed'], -1), color=wind_color, fontsize=20)
+    axwind.set_axis_off()
+    axwind.text(-.03, -.3, 'mph', color=wind_color, fontsize=20)
+
 # ----------------------------------------------------------------------------------------
 def make_combined_noaa_plot(args, location_name, htmldir, history, todays_forecast, forecasts):
     if not os.path.exists(htmldir + '/noaa'):
@@ -303,35 +326,7 @@ def make_mtfcast_plot(args, location_name, location_title, elevation, plotdir, f
     fig.text(0.02, 0.27, 'lo', color=lo_color, fontsize=20)
     plt.suptitle(location_title + '   (' + str(int(round(elevation, -2))) + ' ft)', fontsize=20)
 
-    # ----------------------------------------------------------------------------------------
-    # wind
-    max_wind = 60  # NOTE this doesn't saturate when you get this high, it's just that the arrow starts overflowing its allotted space
-    # ax3 = ax1.twinx()
-    # figwind = ax3.plot(fake_date_range, [min(fc['wind-speed'], max_wind) for fc in combined_forecasts], color=wind_color, linewidth=5, linestyle='-')
-    # ax3.set_axis_off()
-    # fig.text(0.01, 0.05, '0', color=wind_color, fontsize=30)
-    # fig.text(0.01, 0.8, 'mph', color=wind_color, fontsize=30)
-
-    axwind.set_xlim(0., 1.)
-    axwind.set_ylim(-0.5, 0.5)
-    xwidth = 1. / len(combined_forecasts)  # distance between forecasts
-    for ifc in fake_date_range:
-        fc = combined_forecasts[ifc]
-        xpos = 0.5 * xwidth + float(ifc) / len(combined_forecasts)  # center of this forecast
-        arrow_length = 0.9 * xwidth * fc['wind-speed'] / max_wind
-        # slope = float(ifc) / len(combined_forecasts)
-        # theta = math.atan(slope)
-        theta = fc['wind-direction']  #2 * math.pi * float(ifc) / len(combined_forecasts)
-        dx = arrow_length * math.cos(theta)
-        dy = (total_width / total_height) * height_ratios * arrow_length * math.sin(theta)
-        # print xpos, theta, dx, dy
-        # axwind.arrow(xpos, 0., dx, dy)  #, head_width=0.05, head_length=0.1, fc='k', ec='k')
-        axwind.plot([xpos - dx/2, xpos + dx/2], [0. - dy/2, dy/2], linewidth=12, color=wind_color)
-        axwind.plot(xpos + dx/2, 0. + dy/2, marker=(3, 0, theta * 180. / math.pi - 90.), markersize=28, linestyle='None', color=wind_color)
-        # axwind.text(xpos, 0., utils.wind_angles[utils.wind_directions.index(fc['wind-direction'])], color=wind_color, fontsize=20)
-        axwind.text(xpos, -.4, '%.0f' % round(fc['wind-speed'], -1), color=wind_color, fontsize=20)
-    axwind.set_axis_off()
-    axwind.text(-.03, -.3, 'mph', color=wind_color, fontsize=20)
+    make_wind_plot(axwind, combined_forecasts, fake_date_range, total_width, total_height, height_ratios, wind_color)
 
     # ----------------------------------------------------------------------------------------
     plt.savefig(plotdir + '/' + location_name + '-' + str(elevation) + '.png')

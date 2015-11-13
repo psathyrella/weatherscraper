@@ -59,13 +59,13 @@ def get_noaa_forecast(args, location_name, lat, lon, start_date=datetime.date.to
     forecast = ndfdparser.forecast(args, tree, location_name, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
 
-# # ----------------------------------------------------------------------------------------
-# # mountain-forecast.com
-# with open(args.mtfcast_location_fname) as mtfcast_location_file:
-#     reader = csv.DictReader(filter(lambda row: row[0]!='#', mtfcast_location_file))
-#     for line in reader:
-#         print '\n%s:' % line['name']
-#         get_mtfcast(args, line['name'], line['title'], line['elevation'])
+# ----------------------------------------------------------------------------------------
+# mountain-forecast.com
+with open(args.mtfcast_location_fname) as mtfcast_location_file:
+    reader = csv.DictReader(filter(lambda row: row[0]!='#', mtfcast_location_file))
+    for line in reader:
+        print '\n%s:' % line['name']
+        get_mtfcast(args, line['name'], line['title'], line['elevation'])
 
 # ----------------------------------------------------------------------------------------
 # noaa forecast
