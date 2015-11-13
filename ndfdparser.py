@@ -5,6 +5,7 @@ import datetime
 from subprocess import check_call, CalledProcessError
 import csv
 
+import oldplotting
 import plotting
 
 weekdays = ('Mon', 'Tues', 'Wed', 'Thurs', 'Fri', 'Sat', 'Sun')
@@ -240,7 +241,7 @@ def get_history(history_fname):
                 continue
             fileinfo[key] = line
 
-    history = {'dates' : [], 'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : []}
+    history = {'dates' : [], 'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : [], 'wind' : []}
     found_one_day = False
     for iday in range(n_max_days):
         day = datetime.datetime.now() - datetime.timedelta(n_max_days - iday)
@@ -253,11 +254,13 @@ def get_history(history_fname):
             history['lo'].append(float(fileinfo[key]['lo']))
             history['liquid'].append(float(fileinfo[key]['liquid']))
             history['snow'].append(float(fileinfo[key]['snow']) / 12.)
+            history['wind'].append(float(fileinfo[key]['wind']))
         else:
             history['hi'].append(None)
             history['lo'].append(None)
             history['liquid'].append(None)
             history['snow'].append(None)
+            history['wind'].append(None)
 
     if not found_one_day:
         return None
@@ -280,7 +283,7 @@ def get_todays_forecast_from_history(history_fname):
     if len(fileinfo) == 0:
         return None
 
-    forecast = {'dates' : [], 'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : []}
+    forecast = {'dates' : [], 'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : [], 'wind' : []}
     today = datetime.date.today()
     forecast['days'].append(today.day)
     forecast['dates'].append(today)
@@ -291,11 +294,13 @@ def get_todays_forecast_from_history(history_fname):
         forecast['lo'].append(float(fileinfo[key]['lo']))
         forecast['liquid'].append(float(fileinfo[key]['liquid']))
         forecast['snow'].append(float(fileinfo[key]['snow']) / 12.)
+        forecast['wind'].append(float(fileinfo[key]['wind']))
     else:
         forecast['hi'].append(None)
         forecast['lo'].append(None)
         forecast['liquid'].append(None)
         forecast['snow'].append(None)
+        forecast['wind'].append(None)
 
     return forecast
 
@@ -343,7 +348,7 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
     rowlist = []
 
     history_data = get_history(htmldir + '/history/' + location_name + '.csv')
-    history_plotname = plotting.make_noaa_history_plot(args, location_name, htmldir, history_data)
+    history_plotname = oldplotting.make_noaa_history_plot(args, location_name, htmldir, history_data)
     if args.no_history:
         pass
     elif history_plotname is None:
