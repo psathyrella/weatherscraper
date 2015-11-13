@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
-from datetime import datetime, timedelta
+import datetime
 from subprocess import check_call, CalledProcessError
 import csv
 
@@ -17,11 +17,11 @@ def parse_noaa_time_string(noaa_time_str):
         time_str, tzinfo_str = time_str.split('-')  # ignoring time zone info for now
     elif time_str[-1] == 'Z':
         print 'HACK subtracting eight hours from GMT'
-        tzhackdelta = timedelta(hours=-8)
+        tzhackdelta = datetime.timedelta(hours=-8)
         time_str = time_str[:-1]
     year, month, day = [ int(val) for val in date_str.split('-') ]
     hour, minute, second = [ int(val) for val in time_str.split(':') ]
-    moment = datetime(year, month, day, hour, minute, second)
+    moment = datetime.datetime(year, month, day, hour, minute, second)
     if tzhackdelta is not None:
         moment += tzhackdelta
     return moment
@@ -53,7 +53,7 @@ def combine_days(action, pdata, debug=False):
         dhour = end.hour - start.hour
         dmin = end.minute - start.minute
         dsec = end.second - start.second
-        dtime = timedelta(hours=dhour, minutes=dmin, seconds=dsec)  # NOTE rounds to nearest second
+        dtime = datetime.timedelta(hours=dhour, minutes=dmin, seconds=dsec)  # NOTE rounds to nearest second
         # print start, end, dtime
         return float(dtime.seconds) / (60.*60.)
     # ----------------------------------------------------------------------------------------
@@ -99,9 +99,9 @@ def combine_days(action, pdata, debug=False):
         if len(pdata['time-layout']['end']) > 0:  # some of them only have start times
             end = pdata['time-layout']['end'][ival]
         elif len(pdata['time-layout']['start']) > ival+1:  # so use the next start time minus a ms if we can
-            end = pdata['time-layout']['start'][ival+1] - timedelta(milliseconds=-1)
+            end = pdata['time-layout']['start'][ival+1] - datetime.timedelta(milliseconds=-1)
         else:
-            end = pdata['time-layout']['start'][ival] + timedelta(hours=6)  # otherwise just, hell, add six hours
+            end = pdata['time-layout']['start'][ival] + datetime.timedelta(hours=6)  # otherwise just, hell, add six hours
         if debug:
             print ' day %3d-%-3d  hour %3d-%-3d     %s' % (start.day, end.day, start.hour, end.hour, pdata['values'][ival])
 
@@ -119,7 +119,7 @@ def combine_days(action, pdata, debug=False):
                 print '       start (%s) and end (%s) days differ' % (start, end)
             # print start, end
             # assert start.day + 1 == end.day  # for now only handle the case where they differ by one day
-            midnight = datetime(year=end.year, month=end.month, day=end.day, hour=0, minute=0, second=0)
+            midnight = datetime.datetime(year=end.year, month=end.month, day=end.day, hour=0, minute=0, second=0)
             if action == 'sum':
                 hours_before = get_time_delta_in_hours(start, midnight)  #24 - start.hour
                 hours_after = get_time_delta_in_hours(midnight, end)  #end.hour
@@ -131,8 +131,8 @@ def combine_days(action, pdata, debug=False):
                     print 'and second %f * %f / (%f + %f) = %f' % (val, hours_after, hours_before, hours_after, val_after)
             else:
                 val_before, val_after = val, val
-            incorporate_value(start, midnight + timedelta(milliseconds=-1), val_before)  #start + timedelta(hours=24-start.hour, milliseconds=-1), val_before)
-            incorporate_value(midnight, end + timedelta(milliseconds=-1), val_after)  # end - timedelta(hours=end.hour), end, val_after)
+            incorporate_value(start, midnight + datetime.timedelta(milliseconds=-1), val_before)  #start + datetime.timedelta(hours=24-start.hour, milliseconds=-1), val_before)
+            incorporate_value(midnight, end + datetime.timedelta(milliseconds=-1), val_after)  # end - datetime.timedelta(hours=end.hour), end, val_after)
 
     dailyvals = {}
     for ival in range(len(values)):
@@ -233,19 +233,20 @@ def get_history(history_fname):
     with open(history_fname, 'r') as historyfile:
         reader = csv.DictReader(historyfile)
         for line in reader:
-            key = datetime(int(line['year']), int(line['month']), int(line['day']))
-            now = datetime.now()
-            rounded_now = datetime(now.year, now.month, now.day)
+            key = datetime.datetime(int(line['year']), int(line['month']), int(line['day']))
+            now = datetime.datetime.now()
+            rounded_now = datetime.datetime(now.year, now.month, now.day)
             if (key - rounded_now).days >= 0:  # entry is in the future (or is today)
                 continue
             fileinfo[key] = line
 
-    history = {'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : []}
+    history = {'dates' : [], 'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : []}
     found_one_day = False
     for iday in range(n_max_days):
-        day = datetime.now() - timedelta(n_max_days - iday)
+        day = datetime.datetime.now() - datetime.timedelta(n_max_days - iday)
         history['days'].append(day.day)
-        key = datetime(day.year, day.month, day.day)
+        history['dates'].append(datetime.date.today() - datetime.timedelta(n_max_days - iday))  # hacking this in now... should've used this from the start though
+        key = datetime.datetime(day.year, day.month, day.day)
         if key in fileinfo:
             found_one_day = True
             history['hi'].append(float(fileinfo[key]['hi']))
@@ -263,8 +264,44 @@ def get_history(history_fname):
     return history
 
 # ----------------------------------------------------------------------------------------
+def get_todays_forecast_from_history(history_fname):
+    if not os.path.exists(history_fname):
+        return None
+    fileinfo = {}
+    with open(history_fname, 'r') as historyfile:
+        reader = csv.DictReader(historyfile)
+        for line in reader:
+            key = datetime.datetime(int(line['year']), int(line['month']), int(line['day']))
+            date = datetime.date(int(line['year']), int(line['month']), int(line['day']))
+            if date != datetime.date.today():
+                continue
+            fileinfo[key] = line
+
+    if len(fileinfo) == 0:
+        return None
+
+    forecast = {'dates' : [], 'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : []}
+    today = datetime.date.today()
+    forecast['days'].append(today.day)
+    forecast['dates'].append(today)
+    key = datetime.datetime(today.year, today.month, today.day)
+    if key in fileinfo:
+        found_one_day = True
+        forecast['hi'].append(float(fileinfo[key]['hi']))
+        forecast['lo'].append(float(fileinfo[key]['lo']))
+        forecast['liquid'].append(float(fileinfo[key]['liquid']))
+        forecast['snow'].append(float(fileinfo[key]['snow']) / 12.)
+    else:
+        forecast['hi'].append(None)
+        forecast['lo'].append(None)
+        forecast['liquid'].append(None)
+        forecast['snow'].append(None)
+
+    return forecast
+
+# ----------------------------------------------------------------------------------------
 def write_tomorrows_history(history_fname, tomorrow, tmax, tmin, liquid, snow, wind):
-    rounded_tomorrow = datetime(tomorrow.year, tomorrow.month, tomorrow.day)  # no hours and minutes and whatnot
+    rounded_tomorrow = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day)  # no hours and minutes and whatnot
 
     history = {}
     history_header = ('month', 'day', 'year', 'hi', 'lo', 'liquid', 'snow', 'wind')
@@ -272,10 +309,10 @@ def write_tomorrows_history(history_fname, tomorrow, tmax, tmin, liquid, snow, w
         with open(history_fname, 'r') as historyfile:
             reader = csv.DictReader(historyfile)
             for line in reader:
-                key = datetime(int(line['year']), int(line['month']), int(line['day']))
+                key = datetime.datetime(int(line['year']), int(line['month']), int(line['day']))
                 history[key] = line
 
-    # tomorrow = datetime.now() + timedelta(days=1)
+    # tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
     # if rounded_tomorrow in history:
     #     print 'replacing'
     history[rounded_tomorrow] = {'month' : tomorrow.month,
@@ -300,7 +337,7 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
     cloud = combine_days('mean', data['Cloud Cover Amount'])
     percent_precip = combine_days('mean', data['12 Hourly Probability of Precipitation'])
 
-    txtvals = {'days':[], 'tmax':[], 'tmin':[], 'liquid':[], 'snow':[], 'wind':[], 'cloud':[], 'precip':[]}
+    txtvals = {'dates':[], 'days':[], 'tmax':[], 'tmin':[], 'liquid':[], 'snow':[], 'wind':[], 'cloud':[], 'precip':[]}
     if debug:
         print '%-5s    %4s   %5s%5s   %5s  %5s' % ('', 'hi lo', 'precip (snow)', '%', 'wind', 'cloud')
     rowlist = []
@@ -315,10 +352,10 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
         rowlist.append('<a target="_blank" href="' + history_plotname + '"><img  src="' + history_plotname + '" alt="weather" width="120" height="75">')
         
     for iday in range(ndays):
-        day = datetime.now() + timedelta(days=iday)
+        day = datetime.datetime.now() + datetime.timedelta(days=iday)
     
         tmax = find_max_temp(data['Daily Maximum Temperature'], day.day)
-        tmin = find_min_temp(data['Daily Minimum Temperature'], day.day, (day + timedelta(days=1)).day)
+        tmin = find_min_temp(data['Daily Minimum Temperature'], day.day, (day + datetime.timedelta(days=1)).day)
 
         if iday == 1:  # tomorrow (i.e. the soonest complete day for which we have a forecast)
             write_tomorrows_history(htmldir + '/history/' + location_name + '.csv', day, tmax, tmin, liquid.get(day.day, None), snow.get(day.day, None), wind_speed.get(day.day, None))
@@ -411,14 +448,54 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
         tv['cloud'].append(('%5.0f' % cloud[day.day]) if day.day in cloud else '-')
         tv['precip'].append(('%5.0f' % percent_precip[day.day]) if day.day in percent_precip else '-')
         tv['days'].append(weekdays[day.weekday()])
+        tv['dates'].append(datetime.date.today() + datetime.timedelta(days=iday))
         if debug:
             print '%-6s %4s %-3s  %5s  %5s %5s   %5s  %5s' % (weekdays[day.weekday()], tv['tmax'][-1], tv['tmin'][-1], tv['liquid'][-1], tv['snow'][-1], tv['precip'][-1], tv['wind'][-1], tv['cloud'][-1])
 
     return tv, rowlist, history_data
 
 # ----------------------------------------------------------------------------------------
-def combine_data_for_plotting(tv):
-    print tv
+def combine_data_for_plotting(history_data, tv, todays_history):
+    # for k, v in tv.items():
+    #     print '%20s   %s' % (k, v)
+
+    # make sure we get today from only one place
+    today = datetime.date.today()
+    if tv['tmax'][0] == '-':  # it's late in the day, so they don't give us a high temp any more
+        print 'getting today from history file'
+        assert today == tv['dates'][0]
+        for var in tv:
+            del tv[var][0]
+        assert todays_history is not None
+        todays_forecast = todays_history
+    else:
+        print 'getting today from current forecast'
+        assert today == tv['dates'][0]
+        todays_forecast = {}
+        for var in tv:
+            todays_forecast[var] = tv[var][0]
+            del tv[var][0]
+
+    # for k, v in tv.items():
+    #     print '%20s   %s' % (k, v)
+
+    forecasts = {}
+    tvnames = ['tmin', 'tmax', 'liquid', 'wind', 'snow']
+    good_names = ['lo', 'hi', 'liquid', 'wind', 'snow']
+    for var in tv:
+        if var in tvnames:
+            forecasts[good_names[tvnames.index(var)]] = [float(val) if val != '-' and val != '' else None for val in tv[var]]
+        elif var == 'dates':
+            forecasts[var] = [val for val in tv[var]]
+        elif var == 'cloud':
+            continue
+
+    # for k, v in todays_forecast.items():
+    #     print '%20s   %s' % (k, v)
+    # for k, v in forecasts.items():
+    #     print '%20s   %s' % (k, v)
+
+    return todays_forecast, forecasts
 
 # ----------------------------------------------------------------------------------------
 def forecast(args, tree, location_name, htmldir):
@@ -431,7 +508,11 @@ def forecast(args, tree, location_name, htmldir):
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
     rowlist.insert(0, 'LOCATION <font size="2"><a href="' + point_forecast_url + '">noaa</a></font>')
 
-    combine_data_for_plotting(tv)
-    combined_plotname = plotting.make_combined_noaa_plot(args, location_name, htmldir, history_data)
+    # for k, v in history_data.items():
+    #     print '%20s   %s' % (k, v)
+    # print '---'
+    todays_history = get_todays_forecast_from_history(htmldir + '/history/' + location_name + '.csv')
+    todays_forecast, forecasts = combine_data_for_plotting(history_data, tv, todays_history)
+    combined_plotname = plotting.make_combined_noaa_plot(args, location_name, htmldir, history_data, todays_forecast, forecasts)
 
     return tv['days'], rowlist
