@@ -207,26 +207,28 @@ def find_max_temp(pdata, day):
     return None
 
 # ----------------------------------------------------------------------------------------
-def find_icon_for_time(day, hour, icondata):
-    # print 'look: %d %d' % (day, hour)
+def find_icon_for_time(day, hour, icondata, debug=False):
+    if debug:
+        print 'look: %d %d' % (day, hour)
     closest_icon_url = None  # url corresponding to nearest time
     closest_hour = None
     for i in range(len(icondata['time-layout']['start'])):
         time = icondata['time-layout']['start'][i]
-        # print time
+        if debug:
+            print time
         if time.day != day:  # not even the right day
             continue
         if closest_icon_url is None or abs(time.hour - hour) < abs(closest_hour - hour):
             closest_icon_url = icondata['values'][i]
             closest_hour = time.hour
             clday = time.day
-
-    # print '  using %s at day %d hour %d' % (closest_icon_url, clday, closest_hour)
+    if debug:
+        print '  using %s at day %d hour %d' % (closest_icon_url, clday, closest_hour)
     return closest_icon_url  # can be None
 
 # ----------------------------------------------------------------------------------------
 def get_history(history_fname):
-    n_max_days = 7
+    n_max_days = 6
 
     if not os.path.exists(history_fname):
         return None
@@ -344,7 +346,7 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
 
     txtvals = {'dates':[], 'days':[], 'tmax':[], 'tmin':[], 'liquid':[], 'snow':[], 'wind':[], 'cloud':[], 'precip':[]}
     if debug:
-        print '%-5s    %4s   %5s%5s   %5s  %5s' % ('', 'hi lo', 'precip (snow)', '%', 'wind', 'cloud')
+        print '%-5s    %4s   %5s%5s   %5s  %5s' % ('', 'hi lo', 'total precip (in)    snow (in)', '%', 'wind', 'cloud')
     rowlist = []
 
     history_data = get_history(htmldir + '/history/' + location_name + '.csv')
@@ -455,9 +457,26 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
         tv['days'].append(weekdays[day.weekday()])
         tv['dates'].append(datetime.date.today() + datetime.timedelta(days=iday))
         if debug:
-            print '%-6s %4s %-3s  %5s  %5s %5s   %5s  %5s' % (weekdays[day.weekday()], tv['tmax'][-1], tv['tmin'][-1], tv['liquid'][-1], tv['snow'][-1], tv['precip'][-1], tv['wind'][-1], tv['cloud'][-1])
+            print '%-6s %4s %-3s     %5s            %5s     %5s   %5s  %5s' % (weekdays[day.weekday()], tv['tmax'][-1], tv['tmin'][-1], tv['liquid'][-1], tv['snow'][-1], tv['precip'][-1], tv['wind'][-1], tv['cloud'][-1])
 
     return tv, rowlist, history_data
+
+# ----------------------------------------------------------------------------------------
+def convert_crap(var, vals):
+    tvnames = ['tmin', 'tmax', 'liquid', 'wind', 'snow', 'precip', 'cloud']
+    good_names = ['lo', 'hi', 'liquid', 'wind', 'snow', 'percent-precip', 'percent-cloud']
+    if var in tvnames:
+        good_name = good_names[tvnames.index(var)]
+        good_vals = [float(val) if val != '-' and val != '' else None for val in vals]
+        if var == 'snow':  # convert to feet
+            good_vals = [val / 12. if val is not None else None for val in good_vals]
+    elif var == 'dates':
+        good_name = var
+        good_vals = [val for val in vals]
+    else:  # var == 'cloud':
+        good_name, good_vals = None, None
+
+    return good_name, good_vals
 
 # ----------------------------------------------------------------------------------------
 def combine_data_for_plotting(history_data, tv, todays_history):
@@ -478,24 +497,18 @@ def combine_data_for_plotting(history_data, tv, todays_history):
         assert today == tv['dates'][0]
         todays_forecast = {}
         for var in tv:
-            todays_forecast[var] = tv[var][0]
+            name, vals = convert_crap(var, [tv[var][0], ])
+            todays_forecast[name] = vals
             del tv[var][0]
 
     # for k, v in tv.items():
     #     print '%20s   %s' % (k, v)
 
     forecasts = {}
-    tvnames = ['tmin', 'tmax', 'liquid', 'wind', 'snow']
-    good_names = ['lo', 'hi', 'liquid', 'wind', 'snow']
     for var in tv:
-        if var in tvnames:
-            forecasts[good_names[tvnames.index(var)]] = [float(val) if val != '-' and val != '' else None for val in tv[var]]
-            if var == 'snow':  # convert to feet
-                forecasts[good_names[tvnames.index(var)]] = [val / 12. if val is not None else None for val in forecasts[good_names[tvnames.index(var)]]]
-        elif var == 'dates':
-            forecasts[var] = [val for val in tv[var]]
-        elif var == 'cloud':
-            continue
+        name, vals = convert_crap(var, tv[var])
+        if name is not None and vals is not None:
+            forecasts[name] = vals
 
     # for k, v in todays_forecast.items():
     #     print '%20s   %s' % (k, v)

@@ -218,6 +218,8 @@ class mtwxparser(object):
     # ----------------------------------------------------------------------------------------
     def read_and_write_history(self, history_fname, current_forecasts):
         """ write today's forecast to a csv for later retrieval """
+        print 'TODO add paradise back in'
+        print 'TODO specify which days you\'re looking for, and either get each one or add None or something'
         history = []
         history_days = OrderedDict()  # set of days for which we have history
         if os.path.exists(history_fname):  # read in any existing history
@@ -250,32 +252,11 @@ class mtwxparser(object):
                 todays_forecast.append(current_forecasts[itod])
             if len(history) > 2 and history[-3]['date'] == today:
                 history = history[ : -3]  # remove today from history
-        # elif history[-3]['date'] == today:
-        #     print 'not replacing history'
-        #     for itod in range(len(utils.times_of_day)):
-        #         tod = utils.times_of_day[itod]
-        #         if today_key + '-' + tod in history and current_forecasts[0]['date'] == :
-        #             print 'replacing %s' % tod
-        #             fcast = todaysdata[utils.times_of_day.index(tod)]
-        #             history[rounded_today] = {'year' : today.year,
-        #                                       'month' : today.month,
-        #                                       'day' : today.day,
-        #                                       'time-of-day' : tod,
-        #                                       'high' : fcast['high'],
-        #                                       'low' : fcast['low'],
-        #                                       'rain' : fcast['rain'],
-        #                                       'snow' : fcast['snow'],
-        #                                       'wind-speed' : fcast['wind-speed'],
-        #                                       'wind-direction' : fcast['wind-direction']}
         elif len(history) > 2 and history[-3]['date'] == today:
             print 'current forecast is missing today, use history instead'
             current_forecasts = [history[-3], history[-2], history[-1]] + current_forecasts
             todays_forecast = [history[-3], history[-2], history[-1]]
             history = history[ : -3]  # remove today from history
-            # for itod in range(len(utils.times_of_day), 0, -1):
-            #     print history[len(history) - itod]['date']
-            #     assert history[len(history) - itod]['date'] == today
-            #     current_forecasts.insert(0, history[len(history) - itod])
         else:
             raise Exception('couldn\'t find a forecast for today')
     
@@ -291,34 +272,12 @@ class mtwxparser(object):
                 del dcast['date']
                 writer.writerow(dcast)
     
-        # # make something to return (for plotting)
-        # history_list = []
-        # for index, values in history.items():
-        #     # date = datetime.datetime(int(values['year']), int(values['month']), int(values['day']))
-        #     # now = datetime.datetime.now()
-        #     # if date.year == now.year and date.month == now.month and date.day == now.day:
-        #     #     continue
-        #     valdict = {}
-        #     for k, v in values.items():
-        #         if k != 'month' and k != 'day' and k != 'year':
-        #             if k == 'time-of-day':
-        #                 valdict[k] = v
-        #             else:
-        #                 valdict[k] = float(v)  # we can leave these as strings earlier 'cause we're just writing them straight back into the file
-        #     valdict['date'] = date
-        #     history_list.append(valdict)
-        # return history_list
         return current_forecasts, history
     
     # ----------------------------------------------------------------------------------------
     def forecast(self, args, tree, location_name, location_title, elevation, num_days, history_dir, htmldir):
         # print etree.tostring(tree.getroot(), pretty_print=True, method='html')
         forecasts = self.init_data(num_days)
-
-        # tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
-        # with open('tmp.html', 'w') as tmpfile:
-        #     tmpfile.write(tmpstr)
-
         for tr in tree.findall('.//tr'):
             keys = tr.keys()
             thlist = tr.findall('th')
@@ -342,9 +301,9 @@ class mtwxparser(object):
     
         forecasts, history = self.read_and_write_history(history_dir + '/' + location_name + '-' + str(elevation) + '.csv', forecasts)  # potentially modifies <forecasts>
         self.ascii(forecasts)
-        plotdir = htmldir + '/mtfcast/forecast/'
+        plotdir = htmldir + '/mtwx'
         if not os.path.exists(plotdir):
             os.makedirs(plotdir)
         daily_forecasts = self.combine_all_times_of_day(forecasts)
         daily_history = self.combine_all_times_of_day(history[-3 * self.max_history : ])
-        plotting.make_mtfcast_plot(args, location_name, location_title, int(meters_to_feet(int(elevation))), plotdir, forecasts, daily_history, daily_forecasts)
+        plotting.make_mtwx_plot(args, location_name, location_title, int(meters_to_feet(int(elevation))), plotdir, forecasts, daily_history, daily_forecasts)
