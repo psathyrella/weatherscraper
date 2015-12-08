@@ -2,6 +2,7 @@ import datetime
 from lxml import etree
 import os
 import sys
+import copy
 import math
 import numpy
 import csv
@@ -32,6 +33,8 @@ class mtwxparser(object):
     def __init__(self):
         self.max_history = 6
         self.skip_todays_forecast = False  # they've stopped showing today's AM forecast, and are showning the AM for the sixth day out
+        self.fcast_vals = ['high', 'low', 'rain', 'snow', 'wind-speed', 'wind-direction']
+        self.history_header = ['month', 'day', 'year', 'time-of-day'] + self.fcast_vals
 
     # ----------------------------------------------------------------------------------------
     def init_data(self, num_days):
@@ -190,16 +193,23 @@ class mtwxparser(object):
                        'low' : 99999.}
     
         for itod in range(len(utils.times_of_day)):  # sum/average/minmax over the three times of day
-            if fcast[itod]['wind-speed'] > daily_fcast['wind-speed']:  # use the max wind speed
-                daily_fcast['wind-speed'] = fcast[itod]['wind-speed']
-                daily_fcast['wind-direction'] = fcast[itod]['wind-direction']  # just keep track of the direction of the max wind
-            daily_fcast['snow'] += fcast[itod]['snow']
-            daily_fcast['rain'] += fcast[itod]['rain']
-            if fcast[itod]['high'] > daily_fcast['high']:
-                daily_fcast['high'] = fcast[itod]['high']
-            if fcast[itod]['low'] < daily_fcast['low']:
-                daily_fcast['low'] = fcast[itod]['low']
-    
+            for key in self.fcast_vals:
+                if key in daily_fcast and daily_fcast[key] is None:  # already added it as None
+                    continue
+                if fcast[itod][key] is None:
+                    daily_fcast[key] = None
+                    continue
+                if key == 'wind-speed' and fcast[itod]['wind-speed'] > daily_fcast['wind-speed']:  # use the max wind speed
+                    daily_fcast['wind-speed'] = fcast[itod]['wind-speed']
+                    daily_fcast['wind-direction'] = fcast[itod]['wind-direction']  # just keep track of the direction of the max wind
+                elif key == 'wind-direction':  # fill this in while doing 'wind-speed'
+                    continue
+                elif key == 'snow' or key == 'rain':
+                    daily_fcast[key] += fcast[itod][key]
+                elif key == 'high' and fcast[itod][key] > daily_fcast[key]:
+                    daily_fcast[key] = fcast[itod][key]
+                elif key == 'low' and fcast[itod][key] < daily_fcast[key]:
+                    daily_fcast[key] = fcast[itod][key]
         return daily_fcast
     
     # ----------------------------------------------------------------------------------------
@@ -217,55 +227,76 @@ class mtwxparser(object):
     
     # ----------------------------------------------------------------------------------------
     def read_and_write_history(self, history_fname, current_forecasts):
-        """ write today's forecast to a csv for later retrieval """
-        print 'TODO add paradise back in'
-        print 'TODO specify which days you\'re looking for, and either get each one or add None or something'
-        history = []
-        history_days = OrderedDict()  # set of days for which we have history
+        """ NOTE may modify <current_forecasts> """
+
+        def read_history_line(csvline, historyline):
+            """  add values from <csvline> to <historyline> """
+            for k, v in csvline.items():
+                if k == 'month' or k == 'day' or k == 'year':  # only break apart the date for writing -- in the code we use a date object
+                    pass
+                elif k == 'time-of-day':
+                    pass
+                else:
+                    assert historyline['date'] == date
+                    historyline[k] = float(v)
+
+        today = datetime.date.today()
+        todays_forecast = [{'date' : today, 'time-of-day' : tod} for tod in utils.times_of_day]  # read from history file if there -- later we overwrite if it's in <current_forecasts>
+        expected_dates = [today - datetime.timedelta(days=i) for i in range(self.max_history, 0, -1)]
+        old_history = []  # history we want to rewrite to the file, but not plot
+        history = [{'date' : ed, 'time-of-day' : tod} for ed in expected_dates for tod in utils.times_of_day]
+        found_days = OrderedDict()  # set of days for which we have history
         if os.path.exists(history_fname):  # read in any existing history
             with open(history_fname, 'r') as historyfile:
                 reader = csv.DictReader(historyfile)
                 for line in reader:
                     date = datetime.date(int(line['year']), int(line['month']), int(line['day']))
-                    if date not in history_days:
-                        history_days[date] = set()
-                    if line['time-of-day'] in history_days[date]:
+                    itod = utils.times_of_day.index(line['time-of-day'])
+                    if date == today:
+                        read_history_line(line, todays_forecast[itod])
+                        continue
+                    elif date in expected_dates:
+                        idate = 3*expected_dates.index(date) + itod
+                    else:  # add to old_history
+                        idate = None
+                    if date not in found_days:
+                        found_days[date] = set()
+                    if line['time-of-day'] in found_days[date]:
                         raise Exception('got duplicate history %s %s' % (date, line['time-of-day']))
                     else:
-                        history_days[date].add(line['time-of-day'])
-                    for k, v in line.items():
-                        if k == 'month' or k == 'day' or k == 'year':
-                            del line[k]
-                        elif k == 'time-of-day':
-                            pass
-                        else:
-                            line[k] = float(v)
-                    line['date'] = date
-                    history.append(line)
+                        found_days[date].add(line['time-of-day'])
+                    if idate is None:
+                        old_history.append({'date' : date, 'time-of-day' : line['time-of-day']})
+                        read_history_line(line, old_history[-1])
+                    else:
+                        read_history_line(line, history[idate])
         elif not os.path.exists(os.path.dirname(history_fname)):
             os.makedirs(os.path.dirname(history_fname))
-    
-        today = datetime.date.today()
-        todays_forecast = []
-        if current_forecasts[0]['date'] == today:  # take it from today's info if it's there
+
+        # use today's forecast from <current_forecasts> if it's there
+        if current_forecasts[0]['date'] == today:  # TODO don't assume index 0 is today
+            # print 'replacing today from history'
             for itod in range(len(utils.times_of_day)):
-                todays_forecast.append(current_forecasts[itod])
-            if len(history) > 2 and history[-3]['date'] == today:
-                history = history[ : -3]  # remove today from history
-        elif len(history) > 2 and history[-3]['date'] == today:
-            print 'current forecast is missing today, use history instead'
-            current_forecasts = [history[-3], history[-2], history[-1]] + current_forecasts
-            todays_forecast = [history[-3], history[-2], history[-1]]
-            history = history[ : -3]  # remove today from history
+                todays_forecast[itod] = current_forecasts[itod]
         else:
-            raise Exception('couldn\'t find a forecast for today')
-    
-        history_header = ('month', 'day', 'year', 'time-of-day', 'high', 'low', 'rain', 'snow', 'wind-speed', 'wind-direction')
+            # print 'using history for today'
+            for itod in range(len(utils.times_of_day) - 1, -1, -1):
+                current_forecasts.insert(0, todays_forecast[itod])
+
+        # fill in missing values with None
+        for fcast in history + todays_forecast:
+            for key in self.fcast_vals:
+                if not key in fcast:
+                    fcast[key] = None
+
+        # rewrite the history file, including today's forecast (which may or may not have been read from the file initially)
         with open(history_fname, 'w') as historyfile:
-            writer = csv.DictWriter(historyfile, history_header)
+            writer = csv.DictWriter(historyfile, self.history_header)
             writer.writeheader()
-            for fcast in history + todays_forecast:
-                dcast = dict(fcast)
+            for fcast in old_history + history + todays_forecast:
+                if fcast['date'] != today and fcast['date'] not in found_days:
+                    continue
+                dcast = copy.deepcopy(fcast)
                 dcast['month'] = dcast['date'].month
                 dcast['day'] = dcast['date'].day
                 dcast['year'] = dcast['date'].year
@@ -275,7 +306,7 @@ class mtwxparser(object):
         return current_forecasts, history
     
     # ----------------------------------------------------------------------------------------
-    def forecast(self, args, tree, location_name, location_title, elevation, num_days, history_dir, htmldir):
+    def forecast(self, args, tree, filenamestr, location_name, location_title, elevation, num_days, history_dir, htmldir):
         # print etree.tostring(tree.getroot(), pretty_print=True, method='html')
         forecasts = self.init_data(num_days)
         for tr in tree.findall('.//tr'):
@@ -298,12 +329,12 @@ class mtwxparser(object):
                 self.parse_simple('low', tr, forecasts, expected_units='C')
             else:
                 pass
-    
-        forecasts, history = self.read_and_write_history(history_dir + '/' + location_name + '-' + str(elevation) + '.csv', forecasts)  # potentially modifies <forecasts>
-        self.ascii(forecasts)
+
+        forecasts, history = self.read_and_write_history(history_dir + '/' + filenamestr + '.csv', forecasts)  # potentially modifies <forecasts>
+        # self.ascii(forecasts)
         plotdir = htmldir + '/mtwx'
         if not os.path.exists(plotdir):
             os.makedirs(plotdir)
         daily_forecasts = self.combine_all_times_of_day(forecasts)
         daily_history = self.combine_all_times_of_day(history[-3 * self.max_history : ])
-        plotting.make_mtwx_plot(args, location_name, location_title, int(meters_to_feet(int(elevation))), plotdir, forecasts, daily_history, daily_forecasts)
+        plotting.make_mtwx_plot(args, filenamestr, location_name, location_title, int(meters_to_feet(int(elevation))), plotdir, forecasts, daily_history, daily_forecasts)

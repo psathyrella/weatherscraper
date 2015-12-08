@@ -1,5 +1,7 @@
 import math
 
+freezing_point = 32.  # TODO handle deg C
+
 variables = ['date', 'time-of-day', 'wind-speed', 'wind-direction', 'snow', 'rain', 'high', 'low']
 wind_directions = ['E', 'ENE', 'NE', 'NNE', 'N', 'NNW', 'NW', 'WNW', 'W', 'WSW', 'SW', 'SSW', 'S', 'SSE', 'SE', 'ESE']
 times_of_day = ['AM', 'PM', 'night']

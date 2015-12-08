@@ -2,6 +2,7 @@
 import sys
 import os
 import datetime
+from collections import OrderedDict
 from subprocess import check_call, CalledProcessError
 import csv
 
@@ -232,7 +233,7 @@ def get_history(history_fname):
 
     if not os.path.exists(history_fname):
         return None
-    fileinfo = {}
+    fileinfo = OrderedDict()  # unsorted fileinfo
     with open(history_fname, 'r') as historyfile:
         reader = csv.DictReader(historyfile)
         for line in reader:
@@ -242,6 +243,8 @@ def get_history(history_fname):
             if (key - rounded_now).days >= 0:  # entry is in the future (or is today)
                 continue
             fileinfo[key] = line
+
+    # fileinfo = OrderedDict(sorted(fileinfo.iteritems(), key=lambda x: x[1]['month']))
 
     history = {'dates' : [], 'days' : [], 'hi' : [], 'lo' : [], 'liquid' : [], 'snow' : [], 'wind' : []}
     found_one_day = False
@@ -272,7 +275,7 @@ def get_history(history_fname):
 def get_todays_forecast_from_history(history_fname):
     if not os.path.exists(history_fname):
         return None
-    fileinfo = {}
+    fileinfo = OrderedDict()
     with open(history_fname, 'r') as historyfile:
         reader = csv.DictReader(historyfile)
         for line in reader:
@@ -310,7 +313,7 @@ def get_todays_forecast_from_history(history_fname):
 def write_tomorrows_history(history_fname, tomorrow, tmax, tmin, liquid, snow, wind):
     rounded_tomorrow = datetime.datetime(tomorrow.year, tomorrow.month, tomorrow.day)  # no hours and minutes and whatnot
 
-    history = {}
+    history = OrderedDict()
     history_header = ('month', 'day', 'year', 'hi', 'lo', 'liquid', 'snow', 'wind')
     if os.path.exists(history_fname):  # read in any existing history
         with open(history_fname, 'r') as historyfile:
@@ -349,7 +352,7 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
         print '%-5s    %4s   %5s%5s   %5s  %5s' % ('', 'hi lo', 'total precip (in)    snow (in)', '%', 'wind', 'cloud')
     rowlist = []
 
-    history_data = get_history(htmldir + '/history/' + location_name + '.csv')
+    history_data = get_history(htmldir + '/history/noaa/' + location_name + '.csv')
     history_plotname = oldplotting.make_noaa_history_plot(args, location_name, htmldir, history_data)
     if args.no_history:
         pass
@@ -365,7 +368,7 @@ def get_html(args, data, location_name, htmldir, ndays=5, debug=False):
         tmin = find_min_temp(data['Daily Minimum Temperature'], day.day, (day + datetime.timedelta(days=1)).day)
 
         if iday == 1:  # tomorrow (i.e. the soonest complete day for which we have a forecast)
-            write_tomorrows_history(htmldir + '/history/' + location_name + '.csv', day, tmax, tmin, liquid.get(day.day, None), snow.get(day.day, None), wind_speed.get(day.day, None))
+            write_tomorrows_history(htmldir + '/history/noaa/' + location_name + '.csv', day, tmax, tmin, liquid.get(day.day, None), snow.get(day.day, None), wind_speed.get(day.day, None))
 
         icon_url = find_icon_for_time(day.day, 12, data['Conditions Icons'])  # find icon for noon this day
         icon_url = icon_url.replace('http://forecast.weather.gov/images/wtf', 'http://www.nws.noaa.gov/weather/images/fcicons')  # some of the images seem to not be at the orignal url, but if you google them...
@@ -524,14 +527,14 @@ def forecast(args, tree, location_name, elevation, htmldir):
     data = parse_data(root, time_layouts)
     point = root.find('data').find('location').find('point')
     lat, lon = point.get('latitude'), point.get('longitude')
-    tv, rowlist, history_data = get_html(args, data, location_name, htmldir, debug=True)
+    tv, rowlist, history_data = get_html(args, data, location_name, htmldir, debug=False)
     point_forecast_url = list(root.iter('moreWeatherInformation'))[0].text
     rowlist.insert(0, 'LOCATION <font size="2"><a href="' + point_forecast_url + '">noaa</a></font>')
 
     # for k, v in history_data.items():
     #     print '%20s   %s' % (k, v)
     # print '---'
-    todays_history = get_todays_forecast_from_history(htmldir + '/history/' + location_name + '.csv')
+    todays_history = get_todays_forecast_from_history(htmldir + '/history/noaa/' + location_name + '.csv')
     todays_forecast, forecasts = combine_data_for_plotting(history_data, tv, todays_history)
     combined_plotname = plotting.make_combined_noaa_plot(args, location_name, elevation, htmldir, history_data, todays_forecast, forecasts)
 

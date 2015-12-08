@@ -19,8 +19,15 @@ parser.add_argument('--location-fname', default='all-locations.csv')
 parser.add_argument('--noaa-location-fname', default='locations/noaa.csv')
 parser.add_argument('--mtwx-location-fname', default='locations/mtwx.csv')
 parser.add_argument('--outfname', required=True)
+parser.add_argument('--cachedir', default='_cache')
 parser.add_argument('--no-history', action='store_true', help='Don\'t add a column with history plot (still caches current forecast even if true)')
+parser.add_argument('--old-style', action='store_true')
+parser.add_argument('--use-cache', action='store_true', help='read from cached html/xml files')
 args = parser.parse_args()
+
+if not os.path.exists(args.cachedir):
+    os.makedirs(args.cachedir + '/mtwx')
+    os.makedirs(args.cachedir + '/noaa')
 
 # ----------------------------------------------------------------------------------------
 def get_mtwx_link(location, elevation):
@@ -30,17 +37,21 @@ def get_noaa_link(lat, lon):
 
 # ----------------------------------------------------------------------------------------
 def get_mtwx(args, location_name, location_title, elevation, num_days=6, metric=False):
+    filenamestr = location_name + '-' + str(elevation)
     url = get_mtwx_link(location_name, elevation)
     parser = etree.HTMLParser()
 
-    tree = etree.parse(url, parser)
-    # tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
-    # with open('mtwx-test.html', 'w') as tmpfile:
-    #     tmpfile.write(tmpstr)
-    # tree = etree.parse('mtwx-test.html', parser)
+    cachefname = args.cachedir + '/mtwx/' + filenamestr + '.html'
+    if args.use_cache:
+        tree = etree.parse(cachefname, parser)
+    else:
+        tree = etree.parse(url, parser)
+        tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
+        with open(cachefname, 'w') as tmpfile:
+            tmpfile.write(tmpstr)
 
     mtp = mtwxparser.mtwxparser()
-    forecast = mtp.forecast(args, tree, location_name, location_title, elevation, num_days=num_days, history_dir=os.path.dirname(os.path.abspath(args.outfname)) + '/history/mtwx', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+    forecast = mtp.forecast(args, tree, filenamestr, location_name, location_title, elevation, num_days=num_days, history_dir=os.path.dirname(os.path.abspath(args.outfname)) + '/history/mtwx', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
 
 # ----------------------------------------------------------------------------------------
 def get_noaa_forecast(args, location_name, elevation, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
@@ -57,18 +68,21 @@ def get_noaa_forecast(args, location_name, elevation, lat, lon, start_date=datet
     
     url = "?".join([FORECAST_BY_DAY_URL, query_string])
 
-    resp = urllib.urlopen(url)
-    tree = ET.parse(resp)
-    # xmlstr = ET.tostring(tree.getroot())
-    # with open('noaa-test.xml', 'w') as tmpfile:
-    #     tmpfile.write(xmlstr)
-    # tree = ET.parse('noaa-test.xml')
+    cachefname = args.cachedir + '/noaa/' + location_name + '.xml'
+    if args.use_cache:
+        tree = ET.parse(cachefname)
+    else:
+        resp = urllib.urlopen(url)
+        tree = ET.parse(resp)
+        xmlstr = ET.tostring(tree.getroot())
+        with open(cachefname, 'w') as tmpfile:
+            tmpfile.write(xmlstr)
 
     forecast = ndfdparser.forecast(args, tree, location_name, elevation, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
 
 # ----------------------------------------------------------------------------------------
-# mountain-forecast.com
+# read config csvs
 mtwx_locations = OrderedDict()
 with open(args.mtwx_location_fname) as mtwx_location_file:
     reader = csv.DictReader(filter(lambda row: row[0]!='#', mtwx_location_file))
@@ -82,7 +96,7 @@ with open(args.noaa_location_fname) as noaa_location_file:
         noaa_locations[line['name']] = line
 
 # ----------------------------------------------------------------------------------------
-# write html for new plots
+# write html file
 layout = [
     ['Washington & Co.'],
     ['mtwx/Kulshan', 'noaa/Cathedral Peak'],
@@ -97,7 +111,7 @@ layout = [
     ['noaa/Mt Hood', 'noaa/Smith Rock'],
 
     ['Great White North'],
-    ['noaa/Devils Thumb', ''],
+    ['mtwx/Devils Thumb', ''],
     ['mtwx/Mt Waddington', 'mtwx/Slesse'],
     ['mtwx/Serratus', 'mtwx/Stawamus Chief'],
 
@@ -150,7 +164,7 @@ for loclist in layout:
         row.append('<a target="_blank" href="' + fname + '"><img  src="' + fname + '" alt="weather" width="500" height="175">')
     newrowlist.append(header)
     newrowlist.append(row)
-
+print 'TODO clean up unit treatment'
 htmllist += HTML.table(newrowlist)
 notes = ['<h1>Notes</h1>',
          '<ul>',
@@ -163,21 +177,22 @@ notes = ['<h1>Notes</h1>',
          '</ul>',
          ]
 newhtmlcode = ''.join(htmllist) + '\n'.join(notes)
-newhtmlfile = open('/home/dralph/tmp/weatherscraper/weather.html', 'w')
+newhtmlfile = open(args.outfname, 'w')
 newhtmlfile.write(newhtmlcode)
 newhtmlfile.close()
 # sys.exit()        
 
 # ----------------------------------------------------------------------------------------
-# mtwx forecast
+# get mtwx forecasts
 for name, line in mtwx_locations.items():
     print '\n%s:' % line['name']
     get_mtwx(args, line['name'], line['title'], line['elevation'])
 # sys.exit()
 # ----------------------------------------------------------------------------------------
-# noaa forecast
+# and then noaa forecasts
 rows = []
 fails = []
+print 'TODO remove all the cruft from the old style plots'
 for name, line in noaa_locations.items():
     print '\n%s:' % line['name']
     args.location = ()  # TODO not sure why I do this
@@ -197,8 +212,9 @@ for name, line in noaa_locations.items():
         fails.append(line['name'])
     n_tries += 1
 
+if not args.old_style:
+    sys.exit()
 # write old-style html output
-sys.exit()
 header = ['location<br>(<a href="https://github.com/psathyrella/weatherscraper/issues/5">approx.</a> elevation)', ]
 if not args.no_history:
     header.append('history')

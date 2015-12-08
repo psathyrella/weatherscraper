@@ -53,7 +53,7 @@ def make_noaa_history_plot(args, location_name, htmldir, history):
 
     liquid_hist, liquid_weights = [], []
     snow_hist, snow_weights = [], []
-    n_big_number = 1e5
+    n_big_number = 1e2
     for iday in range(len(history['days'])):
         day = history['days'][iday]
         if history['liquid'][iday] is not None:
@@ -125,5 +125,6 @@ def make_noaa_history_plot(args, location_name, htmldir, history):
 
     plotfname = htmldir + '/history/' + location_name + '.png'
     plt.savefig(plotfname)
+    plt.close()
     return plotfname.replace(htmldir + '/', '')
 

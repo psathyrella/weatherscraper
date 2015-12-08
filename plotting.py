@@ -140,7 +140,7 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
         else:
             label = utils.weekdays[combined_forecasts['dates'][ifc].weekday()]
         snow = combined_forecasts['snow'][ifc] if combined_forecasts['snow'][ifc] is not None else -1.
-        print '%3d   %s  %5.1f   %s' % (ifc, combined_forecasts['dates'][ifc], snow, label)
+        # print '%3d   %s  %5.1f   %s' % (ifc, combined_forecasts['dates'][ifc], snow, label)
         xticklabels.append(label)
 
     plt.xticks(xticks)
@@ -177,8 +177,9 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
     ax1.plot([itoday - 0.5, itoday - 0.5], [mintemp, 0.9*maxtemp], color='black', linestyle='--', linewidth=3)
     ax1.plot([itoday + 0.5, itoday + 0.5], [mintemp, 0.9*maxtemp], color='black', linestyle='--', linewidth=3)
     # freezing level line
-    ax1.plot([-0.2, len(fake_date_range) / 4.], [32., 32.], color='blue', linestyle='--', linewidth=1)
-    ax1.plot([3./4 * len(fake_date_range), len(fake_date_range)], [32., 32.], color='blue', linestyle='--', linewidth=1)
+    ax1.plot([-0.2, 7./8 * len(fake_date_range)], [utils.freezing_point, utils.freezing_point], color='blue', linestyle='--', linewidth=1)
+    # ax1.plot([-0.2, len(fake_date_range) / 4.], [32., 32.], color='blue', linestyle='--', linewidth=1)
+    # ax1.plot([3./4 * len(fake_date_range), len(fake_date_range)], [32., 32.], color='blue', linestyle='--', linewidth=1)
 
     for iday in range(len(forecasts['dates'])):
         if forecasts['liquid'][iday] is None:
@@ -214,6 +215,8 @@ def make_hists(forecasts, varname):
     n_big_number = 1e2
     for ifc in range(len(forecasts)):
         fcast = forecasts[ifc]
+        if fcast[varname] is None:  # missing forecast
+            continue
         for il in range(int(n_big_number*float(fcast[varname])) + 1):  # NOTE this gives you 1./n_big_number instead of zero
             hist.append(ifc)
             weights.append(1./n_big_number)
@@ -221,7 +224,7 @@ def make_hists(forecasts, varname):
     return hist, weights
 
 # ----------------------------------------------------------------------------------------
-def make_mtwx_plot(args, location_name, location_title, elevation, plotdir, forecasts, history, daily_forecasts):
+def make_mtwx_plot(args, filenamestr, location_name, location_title, elevation, plotdir, forecasts, history, daily_forecasts):
     """ NOTE this has a *lot* of overlap with the noaa function, but hopefully not enough to justify merging them """
     nxbins = 5
     nybins = 2
@@ -289,10 +292,13 @@ def make_mtwx_plot(args, location_name, location_title, elevation, plotdir, fore
     xticks, xticklabels = [], []
     today = datetime.date.today()
     itoday = None
+    imissing = []
     for ifc in fake_date_range:
         fc = combined_forecasts[ifc]
-        print '%4d  %5s    %8.2f   %8.1f' % (ifc, fc['date'].day, fc['snow'], fc['wind-speed'])
+        # print '%4d  %5s    %8.2f   %8.1f' % (ifc, fc['date'].day, fc['snow'], fc['wind-speed'])
         xticks.append(ifc)
+        if fc['rain'] is None or fc['snow'] is None:  # hopefully either all or none of them are None. I should kinda test each individually
+            imissing.append(ifc)
         if ifc < len(history):
             if ifc == int(len(history) / 2) - 1:  # near the middle of the history
                 label = 'last %d days' % len(history)
@@ -324,8 +330,15 @@ def make_mtwx_plot(args, location_name, location_title, elevation, plotdir, fore
 
     mintemp = min(t for t in [fc['low'] for fc in combined_forecasts] if t is not None)
     maxtemp = max(t for t in [fc['high'] for fc in combined_forecasts] if t is not None)
-    minprecip = min(p for p in [fc['rain'] + fc['snow'] for fc in combined_forecasts])  # snow's already been converted to feet
-    maxprecip = max(p for p in [fc['rain'] + fc['snow'] for fc in combined_forecasts])
+    minprecip, maxprecip = None, None
+    for fc in combined_forecasts:
+        if fc['rain'] is None or fc['snow'] is None:
+            continue
+        precip = fc['rain'] + fc['snow']
+        if minprecip is None or precip < minprecip:
+            minprecip = precip
+        if maxprecip is None or precip > maxprecip:
+            maxprecip = precip
 
     modulo = 5.
     mintemp = int(math.floor(mintemp / modulo)) * modulo
@@ -355,9 +368,13 @@ def make_mtwx_plot(args, location_name, location_title, elevation, plotdir, fore
     ax1.plot([itoday + 4.5, itoday + 4.5], [mintemp, 0.9*maxtemp], color='black', linestyle='--', linewidth=3)
     ax1.plot([itoday + 7.5, itoday + 7.5], [mintemp, 0.9*maxtemp], color='black', linestyle='--', linewidth=3)
 
+    # extra n/a for missing forecasts (wind also prints an n/a)
+    for im in imissing:
+        ax1.text(im, mintemp + 0.5*(maxtemp - mintemp), 'n/a', color=rain_color, fontsize=25)
+
     # freezing level line
-    ax1.plot([-0.2, len(fake_date_range) / 4.], [32., 32.], color='blue', linestyle='--', linewidth=1)
-    ax1.plot([3./4 * len(fake_date_range), len(fake_date_range)], [32., 32.], color='blue', linestyle='--', linewidth=1)
+    ax1.plot([-0.2, 7./8 * len(fake_date_range)], [utils.freezing_point, utils.freezing_point], color='blue', linestyle='--', linewidth=1)
+    # ax1.plot([3./4 * len(fake_date_range), len(fake_date_range)], [utils.freezing_point, utils.freezing_point], color='blue', linestyle='--', linewidth=1)
 
     ax1.spines['top'].set_visible(False)
     ax1.get_xaxis().tick_bottom()
@@ -372,7 +389,7 @@ def make_mtwx_plot(args, location_name, location_title, elevation, plotdir, fore
     make_wind_plot(axwind, combined_forecasts, fake_date_range, total_width, total_height, height_ratios, wind_color)
 
     # ----------------------------------------------------------------------------------------
-    plt.savefig(plotdir + '/' + location_name + '-' + str(elevation) + '.svg')
+    plt.savefig(plotdir + '/' + filenamestr + '.svg')
     plt.close()
     # return plotfname.replace(htmldir + '/', '')
 
