@@ -29,9 +29,10 @@ args = parser.parse_args()
 if not os.path.exists(os.path.dirname(args.outfname)):
     os.makedirs(os.path.dirname(args.outfname))
 
-if not os.path.exists(args.cachedir):
-    os.makedirs(args.cachedir + '/mtwx')
-    os.makedirs(args.cachedir + '/noaa')
+for dname in [args.cachedir, args.history_dir]:
+    if not os.path.exists(dname):
+        os.makedirs(dname + '/mtwx')
+        os.makedirs(dname + '/noaa')
 
 # ----------------------------------------------------------------------------------------
 def get_mtwx_link(location, elevation):
