@@ -19,11 +19,15 @@ parser.add_argument('--location-fname', default='all-locations.csv')
 parser.add_argument('--noaa-location-fname', default='locations/noaa.csv')
 parser.add_argument('--mtwx-location-fname', default='locations/mtwx.csv')
 parser.add_argument('--outfname', required=True)
+parser.add_argument('--history-dir', default='_history')
 parser.add_argument('--cachedir', default='_cache')
 parser.add_argument('--no-history', action='store_true', help='Don\'t add a column with history plot (still caches current forecast even if true)')
 parser.add_argument('--old-style', action='store_true')
 parser.add_argument('--use-cache', action='store_true', help='read from cached html/xml files')
 args = parser.parse_args()
+
+if not os.path.exists(os.path.dirname(args.outfname)):
+    os.makedirs(os.path.dirname(args.outfname))
 
 if not os.path.exists(args.cachedir):
     os.makedirs(args.cachedir + '/mtwx')
@@ -51,7 +55,7 @@ def get_mtwx(args, location_name, location_title, elevation, num_days=6, metric=
             tmpfile.write(tmpstr)
 
     mtp = mtwxparser.mtwxparser()
-    forecast = mtp.forecast(args, tree, filenamestr, location_name, location_title, elevation, num_days=num_days, history_dir=os.path.dirname(os.path.abspath(args.outfname)) + '/history/mtwx', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+    forecast = mtp.forecast(args, tree, filenamestr, location_name, location_title, elevation, num_days=num_days, history_dir=args.history_dir + '/mtwx', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
 
 # ----------------------------------------------------------------------------------------
 def get_noaa_forecast(args, location_name, elevation, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
@@ -116,7 +120,7 @@ layout = [
     ['mtwx/Serratus', 'mtwx/Stawamus Chief'],
 
     ['California'],
-    ['noaa/Shasta', 'noaa/Bishop'],
+    ['mtwx/Shasta', 'noaa/Bishop'],
 
     ['Townships'],
     ['noaa/Seattle', '']
@@ -146,7 +150,7 @@ for loclist in layout:
             elevation_nearest_foot = int(mtwxparser.meters_to_feet(elevation_meters))
             elevation_nearest_hundred_feet = str(int(round(elevation_nearest_foot, -2)))
             # NOTE confusing screw up of name/title distinction here
-            fname = 'mtwx/' + mtwx_locations[name]['name'] + '-' + str(elevation_nearest_foot) + '.svg'  # elevation in meters
+            fname = 'mtwx/' + mtwx_locations[name]['name'] + '-' + str(elevation_meters) + '.svg'  # elevation in meters
             loc_name_str = mtwx_locations[name]['title']
             elevation_str = elevation_nearest_hundred_feet
             url = get_mtwx_link(mtwx_locations[name]['name'], elevation_meters)
