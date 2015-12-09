@@ -55,8 +55,8 @@ def get_mtwx(args, location_name, location_title, elevation, num_days=6, metric=
         with open(cachefname, 'w') as tmpfile:
             tmpfile.write(tmpstr)
 
-    mtp = mtwxparser.mtwxparser()
-    forecast = mtp.forecast(args, tree, filenamestr, location_name, location_title, elevation, num_days=num_days, history_dir=args.history_dir + '/mtwx', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
+    mtp = mtwxparser.mtwxparser(num_days = num_days)
+    forecast = mtp.forecast(args, tree, filenamestr, location_name, location_title, elevation, history_dir=args.history_dir + '/mtwx', htmldir=os.path.dirname(os.path.abspath(args.outfname)))
 
 # ----------------------------------------------------------------------------------------
 def get_noaa_forecast(args, location_name, elevation, lat, lon, start_date=datetime.date.today(), num_days=6, metric=False):
@@ -82,6 +82,9 @@ def get_noaa_forecast(args, location_name, elevation, lat, lon, start_date=datet
         xmlstr = ET.tostring(tree.getroot())
         with open(cachefname, 'w') as tmpfile:
             tmpfile.write(xmlstr)
+        if 'No data were found using the following input:' in xmlstr:
+            print '    No data found for %s' % location_name
+            return None
 
     forecast = ndfdparser.forecast(args, tree, location_name, elevation, htmldir=os.path.dirname(os.path.abspath(args.outfname)))
     return forecast
@@ -113,7 +116,7 @@ layout = [
     ['mtwx/Mt Olympus', 'noaa/Vantage'],
     ['noaa/Index', 'noaa/North Bend'],
     ['noaa/Strobach', 'noaa/Tieton'],
-    ['noaa/Mt Hood', 'noaa/Smith Rock'],
+    ['mtwx/Mt Hood', 'noaa/Smith Rock'],
 
     ['Great White North'],
     ['mtwx/Devils Thumb', ''],
@@ -170,15 +173,17 @@ for loclist in layout:
     newrowlist.append(header)
     newrowlist.append(row)
 print 'TODO clean up unit treatment'
+print 'TODO get wind direction for noaa'
 htmllist += HTML.table(newrowlist)
 notes = ['<h1>Notes</h1>',
          '<ul>',
-         '<li>weather for the last <n> days is the forecast archived the day before, i.e. somewhat less than 24 hours in advance, of the indicated date.</li>',
+         '<li>Weather for the last n days is the forecast archived the day before, i.e. somewhat less than 24 hours in advance, of the indicated date.</li>',
+         '<li>More history (in csvs, for the moment) can be found <a href="https://github.com/psathyrella/weatherhistory">here</a></li>',
          '<li>Some forecasts are from noaa\'s ndfd server, and some are from mountain-forecast. They report somewhat different information, hence two slightly different plotting styles.</li>',
          '<li>ndfd gives me snow and total precip, and in order to make it consistent with the mountain-forecast plots (which have snow and rain), I very hackily and approximately subtract snow in feet from the total precip in inches to get rain. This is why it sometimes looks like it\'s raining a little bit at the top of Tahoma in the middle of winter.</li>',
-         '<li>I would love to use UW\'s WRF instead, but they only make available the jenky useless-ish gif things <a href="http://www.atmos.washington.edu/mm5rt/gfsinit.html">here</a>, which are impossible to pull actual numbers from. Especially their 4/3 km grid would make a <b>huge</b> difference in accuracy, but, sigh, the paymasters forbid dissemination (if I may descend momentarily into histrionics, I wonder what fraction of the funding is actually tax dollars...)</li>',
-         '<li>if all the wind arrows are pointing north, that\'s \'cause I don\'t have the direction information. I need to add it</li>',
-         '<li>have a suggestion? Submit an <a href="https://github.com/psathyrella/weatherscraper/issues/new">issue</a>'
+         '<li>It would be unbelievably awesome to use UW\'s WRF as a source for everything. It has much smaller grids, which would help a lot. But they only make available the jenky useless-ish gif things <a href="http://www.atmos.washington.edu/mm5rt/gfsinit.html">here</a>, which are impossible to pull actual numbers from.</li>',
+         '<li>If all the wind arrows are pointing north, that\'s \'cause I don\'t have the direction information. I need to add it</li>',
+         '<li>Have a suggestion? Submit an <a href="https://github.com/psathyrella/weatherscraper/issues/new">issue</a> (hmm, darn, they make you login for that... um, working on this)'
          '</ul>',
          ]
 newhtmlcode = ''.join(htmllist) + '\n'.join(notes)

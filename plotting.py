@@ -224,7 +224,7 @@ def make_hists(forecasts, varname):
     return hist, weights
 
 # ----------------------------------------------------------------------------------------
-def make_mtwx_plot(args, filenamestr, location_name, location_title, elevation, plotdir, forecasts, history, daily_forecasts):
+def make_mtwx_plot(args, filenamestr, location_name, location_title, elevation, plotdir, todaycast, forecasts, daily_history, daily_forecasts):
     """ NOTE this has a *lot* of overlap with the noaa function, but hopefully not enough to justify merging them """
     nxbins = 5
     nybins = 2
@@ -268,12 +268,14 @@ def make_mtwx_plot(args, filenamestr, location_name, location_title, elevation, 
     rain_color = '#1947D1'
     snow_color = 'grey'
 
-    todaycast = forecasts[:3]
-    tomorrowcast = forecasts[3:6]
-    dayaftertomorrowcast = forecasts[6:9]
+    tomorrowcast = forecasts[0:3]
+    dayaftertomorrowcast = forecasts[3:6]
 
-    combined_forecasts = history + todaycast + tomorrowcast + dayaftertomorrowcast + daily_forecasts[3:]
-
+    combined_forecasts = daily_history + todaycast + tomorrowcast + dayaftertomorrowcast + daily_forecasts[2:]
+    # for ifc in range(1, len(combined_forecasts)):
+    #     print combined_forecasts[ifc-1]['date']
+    #     # assert combined_forecasts[ifc-1]['date'] + datetime.timedelta(days=1) == combined_forecasts[ifc]['date']
+    # sys.exit()
     rain_hist, rain_weights = make_hists(combined_forecasts, 'rain')
     snow_hist, snow_weights = make_hists(combined_forecasts, 'snow')
 
@@ -299,9 +301,9 @@ def make_mtwx_plot(args, filenamestr, location_name, location_title, elevation, 
         xticks.append(ifc)
         if fc['rain'] is None or fc['snow'] is None:  # hopefully either all or none of them are None. I should kinda test each individually
             imissing.append(ifc)
-        if ifc < len(history):
-            if ifc == int(len(history) / 2) - 1:  # near the middle of the history
-                label = 'last %d days' % len(history)
+        if ifc < len(daily_history):
+            if ifc == int(len(daily_history) / 2) - 1:  # near the middle of the history
+                label = 'last %d days' % len(daily_history)
             else:
                 label = ''
         elif fc['date'] == today:  # today

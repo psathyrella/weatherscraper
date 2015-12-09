@@ -1,12 +1,12 @@
 name,lat,lon,elevation,mtwx-location,mtwx-elevation
-Kulshan,48.78,-121.81,10070,Mount-Baker,3285
-Phantom Peak,48.82,-121.34,6530,Luna-Peak-Washington,2533
+# Kulshan,48.78,-121.81,10070,Mount-Baker,3285
+# Phantom Peak,48.82,-121.34,6530,Luna-Peak-Washington,2533
 Cathedral Peak,48.99,-120.19,6844,,
 Washington Pass,48.51,-120.64,6827,Liberty-Bell-Mountain,2353
 Colchuk Lake,47.49153,-120.8335,5000,Dragontail-Peak,2694
-Dakobed,48.11,-121.11,9512,Glacier-Peak,3213
-Tahoma,46.85,-121.76,12759,Mount-Rainier,4392
-Mt Olympus,47.80,-123.71,5996,Mount-Olympus-2,2427
+# Dakobed,48.11,-121.11,9512,Glacier-Peak,3213
+# Tahoma,46.85,-121.76,12759,Mount-Rainier,4392
+# Mt Olympus,47.80,-123.71,5996,Mount-Olympus-2,2427
 Index,47.81,-121.56,485,,
 North Bend,47.4956,-121.78677,597,,
 Leavenworth,47.59,-120.67,1198,,
@@ -15,7 +15,7 @@ Tieton,46.70,-120.755,1998,,
 Strobach,46.5955,-121.0745,6000,,
 Stevens Pass,47.77,-121.07,4042,,
 Snoqualmie Pass,47.41,-121.53,4759,Snoqualmie-Mountain,1914
-Mt Hood,45.38,-121.70,9623,Mount-Hood,3426
+# Mt Hood,45.38,-121.70,9623,Mount-Hood,3426
 Smith Rock,44.37,-121.11,3336,,
 # Trout Creek,44.80,-121.109,1624,,
 Sawtooths,44.15,-114.94,7200,,

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-git pull origin master
+# git pull origin master
 ./scrape.py --outfname psathyrella.github.io/weatherscraper/weather.html
 
 cd _history

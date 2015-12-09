@@ -1,3 +1,9 @@
+# TODO get info from here
+forecasts: http://ready.arl.noaa.gov/READYmetdata.php
+history: http://ready.arl.noaa.gov/archives.php
+
+also maybe useful: ftp://ftp.cpc.ncep.noaa.gov/wd51we/ams2010_sc/Obtaining%20data.pdf
+
 ## links:
 http://www.atmos.washington.edu/weather/radar.shtml
 http://www.atmos.washington.edu/mm5rt/
