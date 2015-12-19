@@ -101,9 +101,8 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
         if combined_forecasts['liquid'][iday] is not None:
             total_liquid_precip = combined_forecasts['liquid'][iday]
             if combined_forecasts['snow'][iday] is not None:  # HACK subtract off a rough approximation of how much is falling as snow -- snowfall is in feet, and a foot is about an inch of liquid precip... right?
-                # print total_liquid_precip,
-                total_liquid_precip -= combined_forecasts['snow'][iday]
-                # print '--->', total_liquid_precip
+                total_liquid_precip = max(0., total_liquid_precip - combined_forecasts['snow'][iday])
+            print n_big_number, total_liquid_precip, int(n_big_number*total_liquid_precip) + 1
             for il in range(int(n_big_number*total_liquid_precip) + 1):  # NOTE this gives you 1./n_big_number instead of zero
                 liquid_hist.append(iday)
                 liquid_weights.append(1./n_big_number)
@@ -115,6 +114,8 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
     # date_range = range(combined_forecasts['days'][0], combined_forecasts['days'][0] + n_days)
     fake_date_range = range(n_days)
 
+    if len(liquid_hist) == 0:
+        raise Exception('liquid hist data has length zero')
     ax2.hist(liquid_hist, bins=n_days, range=(fake_date_range[0]-.6, fake_date_range[-1]+.4), weights=liquid_weights, rwidth=.5, color=liquid_color, alpha=0.5)  #, hatch='//')
     ax2.hist(snow_hist, bins=n_days, range=(fake_date_range[0]-.4, fake_date_range[-1]+.6), weights=snow_weights, rwidth=.5, color=snow_color, alpha=0.5)
 
