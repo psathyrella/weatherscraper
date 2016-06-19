@@ -1,10 +1,11 @@
 #!/bin/bash
 
 wrfdir=$PWD
-# ./wrfparser.py
+./wrfparser.py
 cd ~/psathyrella.github.io
 git pull origin master
 cp $wrfdir/*.html ~/psathyrella.github.io/wrfparser/
+cp $wrfdir/legends/* ~/psathyrella.github.io/wrfparser/legends/
 cp -r $wrfdir/images/processed/* ~/psathyrella.github.io/wrfparser/images/processed
 git add wrfparser/*
 git commit -m"new fcast"
