@@ -277,7 +277,7 @@ def get_links():
         domain, variable = reverse_htmlfname(fname)
         links.append('<a href="' + fname + '"><font size=3>' + domain + '-' + variable + '</font></a>')
         if last_domain is not None and domain != last_domain:
-            links[-1] += '<br>'
+            links[-1] = '<br>' + links[-1]
         last_domain = domain
     return links
 
@@ -323,7 +323,7 @@ with open('config.csv') as cfgfile:
 
 for line in stuff_to_run:
     print line['domain'], line['variable']
-    # download_all_images(line['domain'], line['maptype'], line['variable'])
+    download_all_images(line['domain'], line['maptype'], line['variable'])
     write_html(line['domain'], line['maptype'], line['variable'])
 
 for line in stuff_to_run:
