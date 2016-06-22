@@ -277,7 +277,7 @@ def get_links():
         domain, variable = reverse_htmlfname(fname)
         links.append('<a href="' + fname + '"><font size=3>' + domain + '-' + variable + '</font></a>')
         if last_domain is not None and domain != last_domain:
-            links[-1] = '<br>' + links[-1]
+            links[-1] = '<br>\n' + links[-1]
         last_domain = domain
     return links
 
@@ -288,9 +288,10 @@ def add_linkstrs(domain, variable):
     with open(get_htmlfname(domain, variable), 'w') as htmlfile:
         for line in lines:
             if '<body' in line:
+                htmlfile.write('<center>\n')
                 for link in get_links():
                     htmlfile.write(link + '\n')
-                htmlfile.write('<br><br>\n')
+                htmlfile.write('</center>\n<br>\n<br>\n')
             htmlfile.write(line)
 
 # ----------------------------------------------------------------------------------------
