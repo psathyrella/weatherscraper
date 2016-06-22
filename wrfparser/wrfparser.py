@@ -20,7 +20,7 @@ titles = {
 
 expected_date_format = ('hours', 'tz', 'weekday', 'monthday', 'month', 'year')
 def convert_dateinfo(dateinfo):
-    dateinfo['hours'] = int(dateinfo['hours'].replace('O', '0'))
+    dateinfo['hours'] = int(dateinfo['hours'].replace('O', '0').replace('l', '1'))
     dateinfo['monthday'] = int(dateinfo['monthday'])
     dateinfo['year'] = 2000 + int(dateinfo['year'])
 
