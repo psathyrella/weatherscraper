@@ -331,7 +331,7 @@ def write_html(domain, maptype, variable):
             if domain != '12km' and last_weekday is not None and imgfo[ifn]['datetime'].weekday() != last_weekday:
                 htmlfile.write('<br>\n')
             last_weekday = imgfo[ifn]['datetime'].weekday()
-            htmlfile.write('<img href="' + imgfo[ifn]['fname'] + '" src="' + imgfo[ifn]['fname'] + '", width="150">\n')
+            htmlfile.write('<a href="' + get_url(domain, maptype, variable, imgfo[ifn]['datetime'].hour) + '"> <img src="' + imgfo[ifn]['fname'] + '", width="150"> </a>\n')
         htmlfile.write('<br>\n')
         htmlfile.write('<center><img src="' + get_legend_fname(maptype, variable) + '", width="' + ('500' if 'wind' in variable else '350') + '"></center>\n')
         htmlfile.write(htmlfooter)
@@ -351,7 +351,7 @@ with open(args.config_fname) as cfgfile:
 
 for line in stuff_to_run:
     print line['domain'], line['variable']
-    # download_all_images(line['domain'], line['maptype'], line['variable'])
+    download_all_images(line['domain'], line['maptype'], line['variable'])
     write_html(line['domain'], line['maptype'], line['variable'])
 
 for line in stuff_to_run:
