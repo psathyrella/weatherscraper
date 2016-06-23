@@ -278,8 +278,8 @@ def reverse_htmlfname(fname):
     return os.path.basename(fname).replace('.html', '').split('_')
 
 # ----------------------------------------------------------------------------------------
-def get_links():
-    fnames = sorted(glob.glob('*.html'))
+def get_links(all_fnames):
+    fnames = sorted(all_fnames)
     links = []
     last_domain = None
     for fname in fnames:
@@ -294,22 +294,22 @@ def get_links():
     return links
 
 # ----------------------------------------------------------------------------------------
-def write_index_html(fname):
+def write_index_html(fname, all_fnames):
     with open(fname, 'w') as htmlfile:
         htmlfile.write(htmlheader)
-        for link in get_links():
+        for link in get_links(all_fnames):
             htmlfile.write(link + '\n')
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
-def add_linkstrs(fname):
+def add_linkstrs(fname, all_fnames):
     with open(fname) as htmlfile:
         lines = htmlfile.readlines()
     with open(fname, 'w') as htmlfile:
         for line in lines:
             if '<body' in line:
                 # htmlfile.write('<center>\n')
-                for link in get_links():
+                for link in get_links(all_fnames):
                     htmlfile.write(link + '\n')
                 # htmlfile.write('</center>\n')
                 htmlfile.write('<br>\n<br>\n')
@@ -354,7 +354,8 @@ for line in stuff_to_run:
     download_all_images(line['domain'], line['maptype'], line['variable'])
     write_html(line['domain'], line['maptype'], line['variable'])
 
+htmlfnames = [get_htmlfname(line['domain'], line['variable']) for line in stuff_to_run]
 for line in stuff_to_run:
-    add_linkstrs(get_htmlfname(line['domain'], line['variable']))
+    add_linkstrs(get_htmlfname(line['domain'], line['variable']), htmlfnames)
 
-write_index_html(args.outdir + '/index.html')
+write_index_html(args.outdir + '/index.html', htmlfnames)
