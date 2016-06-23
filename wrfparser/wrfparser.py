@@ -10,6 +10,7 @@ from subprocess import check_call, CalledProcessError
 import datetime
 import calendar
 import pytesseract
+import argparse
 
 titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
@@ -70,7 +71,6 @@ paste_positions = {
 }
 
 base_url = 'http://www.atmos.washington.edu/wrfrt/data/timeindep'
-# base_outdir = os.getenv('PWD') + '/_images'
 base_outdir = 'images'
 domain_codes = {
     '1.33km' : 'd4',
@@ -147,6 +147,7 @@ def get_legend_fname(maptype, variable):
 
 # ----------------------------------------------------------------------------------------
 def get_fname(domain, maptype, variable, hour, processed=False):
+    # NOTE this is the *relative* path, used for links
     outpath = base_outdir
     suffix = 'gif'
     if processed:
@@ -157,7 +158,7 @@ def get_fname(domain, maptype, variable, hour, processed=False):
 
 # ----------------------------------------------------------------------------------------
 def download_image(domain, maptype, variable, hour):
-    outfname = get_fname(domain, maptype, variable, hour)
+    outfname = args.outdir + '/' + get_fname(domain, maptype, variable, hour)
     if not os.path.exists(os.path.dirname(outfname)):
         os.makedirs(os.path.dirname(outfname))
     url = get_url(domain, maptype, variable, hour)
@@ -220,7 +221,7 @@ def dummy_image():
 
 # ----------------------------------------------------------------------------------------
 def get_fcast_image_info(domain, maptype, variable, hour):
-    fname = get_fname(domain, maptype, variable, hour)
+    fname = args.outdir + '/' + get_fname(domain, maptype, variable, hour)
     if os.path.exists(fname):
         pass
         # print '  already exists: %s' % fname
@@ -245,7 +246,7 @@ def get_fcast_image_info(domain, maptype, variable, hour):
     # subimages['right-legend'].save('tmp.png')
     # sys.exit()
 
-    processed_fname = get_fname(domain, maptype, variable, hour, processed=True)
+    processed_fname = args.outdir + '/' + get_fname(domain, maptype, variable, hour, processed=True)
     if not os.path.exists(os.path.dirname(processed_fname)):
         os.makedirs(os.path.dirname(processed_fname))
     final_image.save(processed_fname)
@@ -263,11 +264,11 @@ def join_fcasts(domain, maptype, variable):
 
 # ----------------------------------------------------------------------------------------
 def get_htmlfname(domain, variable):
-    return domain + '_' + variable + '.html'    
+    return args.outdir + '/' + domain + '_' + variable + '.html'
 
 # ----------------------------------------------------------------------------------------
 def reverse_htmlfname(fname):
-    return fname.replace('.html', '').split('_')
+    return os.path.basename(fname).replace('.html', '').split('_')
 
 # ----------------------------------------------------------------------------------------
 def get_links():
@@ -321,8 +322,13 @@ def write_html(domain, maptype, variable):
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
+parser = argparse.ArgumentParser()
+parser.add_argument('--outdir', required=True)
+parser.add_argument('--config-fname', default=os.path.dirname(os.path.realpath(__file__)) + '/config.csv')
+args = parser.parse_args()
+
 stuff_to_run = []
-with open('config.csv') as cfgfile:
+with open(args.config_fname) as cfgfile:
     reader = csv.DictReader(row for row in cfgfile if not row.startswith('#'))
     for line in reader:
         stuff_to_run.append(line)
@@ -334,3 +340,4 @@ for line in stuff_to_run:
 
 for line in stuff_to_run:
     add_linkstrs(line['domain'], line['variable'])
+print 'need to update index.html'

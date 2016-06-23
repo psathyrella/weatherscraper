@@ -9,6 +9,10 @@ git commit -m "forecast for `date`"
 git push origin master
 cd ..
 
+cd wrfparser
+./wrfparser.py --outdir psathyrella.github.io/wrfparser
+cd ..
+
 cd psathyrella.github.io
 git pull origin master
 git add --all weatherscraper/
