@@ -143,7 +143,14 @@ def get_legend_fname(maptype, variable):
         variable_category = 'wind'
     else:
         assert False
-    return 'legends/' + maptype + '/' + variable_category + '.svg'
+
+    legend_dir = 'legends/' + maptype  # *relative* path
+    legendfname = variable_category + '.svg'
+    if not os.path.exists(args.outdir + '/' + legend_dir):
+        os.makedirs(args.outdir + '/' + legend_dir)
+    check_call(['cp', '-v', wrfdir + '/' + legend_dir + '/' + legendfname, args.outdir + '/' + legend_dir + '/' + legendfname])
+
+    return legend_dir + '/' + legendfname
 
 # ----------------------------------------------------------------------------------------
 def get_fname(domain, maptype, variable, hour, processed=False):
@@ -287,10 +294,18 @@ def get_links():
     return links
 
 # ----------------------------------------------------------------------------------------
-def add_linkstrs(domain, variable):
-    with open(get_htmlfname(domain, variable)) as htmlfile:
+def write_index_html(fname):
+    with open(fname, 'w') as htmlfile:
+        htmlfile.write(htmlheader)
+        for link in get_links():
+            htmlfile.write(link + '\n')
+        htmlfile.write(htmlfooter)
+
+# ----------------------------------------------------------------------------------------
+def add_linkstrs(fname):
+    with open(fname) as htmlfile:
         lines = htmlfile.readlines()
-    with open(get_htmlfname(domain, variable), 'w') as htmlfile:
+    with open(fname, 'w') as htmlfile:
         for line in lines:
             if '<body' in line:
                 # htmlfile.write('<center>\n')
@@ -322,9 +337,10 @@ def write_html(domain, maptype, variable):
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
+wrfdir = os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument('--outdir', required=True)
-parser.add_argument('--config-fname', default=os.path.dirname(os.path.realpath(__file__)) + '/config.csv')
+parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
 args = parser.parse_args()
 
 stuff_to_run = []
@@ -335,9 +351,10 @@ with open(args.config_fname) as cfgfile:
 
 for line in stuff_to_run:
     print line['domain'], line['variable']
-    download_all_images(line['domain'], line['maptype'], line['variable'])
+    # download_all_images(line['domain'], line['maptype'], line['variable'])
     write_html(line['domain'], line['maptype'], line['variable'])
 
 for line in stuff_to_run:
-    add_linkstrs(line['domain'], line['variable'])
-print 'need to update index.html'
+    add_linkstrs(get_htmlfname(line['domain'], line['variable']))
+
+write_index_html(args.outdir + '/index.html')
