@@ -86,12 +86,13 @@ variable_codes = {
     '3-hour-precip' : 'pcp3',
     '24-hour-precip' : 'pcp24',
     'surface-temp' : 'tsfc',
-    '10m-wind-speed' : 'wssfc'
+    '10m-wind-speed' : 'wssfc2'
 }
 expected_hours = {
     '12km' : {
         '24-hour-precip' : [h for h in range(24, 180, 12)],
-        'surface-temp' : [h for h in range(24, 180, 12)]
+        'surface-temp' : [h for h in range(24, 180, 12)],
+        '10m-wind-speed' : [h for h in range(24, 180, 12)]
     },
     '4km' : {
         '3-hour-precip' : [h for h in range(6, 84, 3) if h != 3],
@@ -142,7 +143,7 @@ def get_legend_fname(maptype, variable):
         variable_category = 'wind'
     else:
         assert False
-    return 'legends/legend-' + variable_category + '-' + maptype + '.svg'
+    return 'legends/' + maptype + '/' + variable_category + '.svg'
 
 # ----------------------------------------------------------------------------------------
 def get_fname(domain, maptype, variable, hour, processed=False):
@@ -275,9 +276,12 @@ def get_links():
     last_domain = None
     for fname in fnames:
         domain, variable = reverse_htmlfname(fname)
-        links.append('<a href="' + fname + '"><font size=3>' + domain + '-' + variable + '</font></a>')
+        linkstr = '<a href="' + fname + '"><font size=3>' + variable.replace('-', ' ') + '</font></a>'
+        if last_domain is None or domain != last_domain:
+            linkstr = '<font color=white>' + domain + ': </font>' + linkstr
         if last_domain is not None and domain != last_domain:
-            links[-1] = '<br>\n' + links[-1]
+            linkstr = '<br>\n' + linkstr
+        links.append(linkstr)
         last_domain = domain
     return links
 
@@ -288,10 +292,11 @@ def add_linkstrs(domain, variable):
     with open(get_htmlfname(domain, variable), 'w') as htmlfile:
         for line in lines:
             if '<body' in line:
-                htmlfile.write('<center>\n')
+                # htmlfile.write('<center>\n')
                 for link in get_links():
                     htmlfile.write(link + '\n')
-                htmlfile.write('</center>\n<br>\n<br>\n')
+                # htmlfile.write('</center>\n')
+                htmlfile.write('<br>\n<br>\n')
             htmlfile.write(line)
 
 # ----------------------------------------------------------------------------------------
@@ -312,7 +317,7 @@ def write_html(domain, maptype, variable):
             last_weekday = imgfo[ifn]['datetime'].weekday()
             htmlfile.write('<img href="' + imgfo[ifn]['fname'] + '" src="' + imgfo[ifn]['fname'] + '", width="150">\n')
         htmlfile.write('<br>\n')
-        htmlfile.write('<center><img src="' + get_legend_fname(maptype, variable) + '", width="550"></center>\n')
+        htmlfile.write('<center><img src="' + get_legend_fname(maptype, variable) + '", width="' + ('500' if 'wind' in variable else '350') + '"></center>\n')
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
