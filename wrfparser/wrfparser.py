@@ -9,7 +9,7 @@ import glob
 from subprocess import check_call, CalledProcessError
 import datetime
 import calendar
-# from tesseract import image_to_string
+import pytesseract
 
 titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
@@ -180,16 +180,16 @@ def join_image_pieces(subimages, maptype):
 
 # ----------------------------------------------------------------------------------------
 def run_tesseract(img):
-    tmptiff = '/tmp/tmp-date-image.tiff'
-    tmptxt = '/tmp/tmp-date-image'
-    img.save(tmptiff)
-    check_call(['tesseract', tmptiff, tmptxt])
-    with open(tmptxt + '.txt') as txtfile:
-        return_str = txtfile.read()
-    os.remove(tmptiff)
-    os.remove(tmptxt + '.txt')
+    return_str = pytesseract.image_to_string(img)
+    # tmptiff = '/tmp/tmp-date-image.tiff'
+    # tmptxt = '/tmp/tmp-date-image'
+    # img.save(tmptiff)
+    # check_call(['tesseract', tmptiff, tmptxt])
+    # with open(tmptxt + '.txt') as txtfile:
+    #     return_str = txtfile.read()
+    # os.remove(tmptiff)
+    # os.remove(tmptxt + '.txt')
     print return_str
-    # return_str = filter(str.isalnum, return_str)
     return return_str
 
 # ----------------------------------------------------------------------------------------
