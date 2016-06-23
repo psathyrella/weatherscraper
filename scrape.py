@@ -39,6 +39,8 @@ def get_mtwx_link(location, elevation):
     return 'http://www.mountain-forecast.com/peaks/' + location + '/forecasts/' + str(elevation)
 def get_noaa_link(lat, lon):
     return 'http://forecast.weather.gov/MapClick.php?textField1=' + str(lat) + '&textField2=' + str(lon)
+def get_wrf_links(location):
+    return 'http://www.atmos.washington.edu/mm5rt/rt/load.cgi?latest+YYYYMMDDHH/images_d4/' + location + '.mg.gif+text+4/3%20km'
 
 # ----------------------------------------------------------------------------------------
 def get_mtwx(args, location_name, location_title, elevation, num_days=6, metric=False):
@@ -125,13 +127,15 @@ layout = [
 
     ['California'],
     ['mtwx/Shasta', 'noaa/Bishop'],
+    ['mtwx/Yosemite', 'noaa/Joshua Tree'],
 
     ['Townships'],
     ['noaa/Seattle', '']
 ]
 
 htmlheaders = ['<style> h1 { font-size: 150%; } </style>',
-               'retrieved %s<br>' % datetime.datetime.now().strftime('%a %B %d %Y at %H:%M')
+               'retrieved %s<br>' % datetime.datetime.now().strftime('%a %B %d %Y at %H:%M'),
+               '<br><a href="http://psathyrella.github.io/wrfparser/4km_3-hour-precip.html">uw wrf interface</a><br>'
 ]
 htmllist = ['\n'.join(htmlheaders)]
 newrowlist = []
@@ -183,7 +187,7 @@ notes = ['<h1>Notes</h1>',
          '<li>ndfd gives me snow and total precip, and in order to make it consistent with the mountain-forecast plots (which have snow and rain), I very hackily and approximately subtract snow in feet from the total precip in inches to get rain. This is why it sometimes looks like it\'s raining a little bit at the top of Tahoma in the middle of winter.</li>',
          '<li>It would be unbelievably awesome to use UW\'s WRF as a source for everything. It has much smaller grids, which would help a lot. But they only make available the jenky useless-ish gif things <a href="http://www.atmos.washington.edu/mm5rt/gfsinit.html">here</a>, which are impossible to pull actual numbers from.</li>',
          '<li>If all the wind arrows are pointing north, that\'s \'cause I don\'t have the direction information. I need to add it</li>',
-         '<li>Have a suggestion? Submit an <a href="https://github.com/psathyrella/weatherscraper/issues/new">issue</a> (hmm, darn, they make you login for that... um, working on this)'
+         '<li>Have a suggestion? Submit an <a href="https://github.com/psathyrella/weatherscraper/issues/new">issue</a> (hmm, darn, they make you get a [free] account for that... um, working on this)'
          '</ul>',
          ]
 newhtmlcode = ''.join(htmllist) + '\n'.join(notes)
@@ -224,6 +228,8 @@ for name, line in noaa_locations.items():
 
 if not args.old_style:
     sys.exit()
+
+# ----------------------------------------------------------------------------------------
 # write old-style html output
 header = ['location<br>(<a href="https://github.com/psathyrella/weatherscraper/issues/5">approx.</a> elevation)', ]
 if not args.no_history:

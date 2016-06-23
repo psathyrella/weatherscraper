@@ -10,6 +10,7 @@ git push origin master
 cd ..
 
 cd psathyrella.github.io
+git pull origin master
 git add --all weatherscraper/
 git commit -m "forecast for `date`"
 git push origin master

@@ -79,10 +79,14 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
     # plt.locator_params(nbins=nxbins, axis='x')
     # plt.locator_params(nbins=nybins, axis='y')
     combined_forecasts = {}
-    for var in history:
-        if var == 'days':
+    for var in todays_forecast:
+        if var is None:  # not sure what this is doing in there
             continue
-        combined_forecasts[var] = history[var] + todays_forecast[var] + forecasts[var]
+        if var == 'days' or var == 'percent-cloud' or var == 'percent-precip':
+            continue
+        combined_forecasts[var] = todays_forecast[var] + forecasts[var]
+        if history is not None:
+            combined_forecasts[var] = history[var] + combined_forecasts[var]
 
     ax2 = ax1.twinx()
     liquid_color = '#1947D1'
@@ -95,19 +99,25 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
 
     liquid_hist, liquid_weights = [], []
     snow_hist, snow_weights = [], []
-    n_big_number = 1e2
+    n_big_number = 5e2
     for iday in range(n_days):
-        # day = combined_forecasts['days'][iday]
-        if combined_forecasts['liquid'][iday] is not None:
+        # liquid
+        if combined_forecasts['liquid'][iday] is None:
+            liquid_hist.append(iday)
+            liquid_weights.append(1./n_big_number)
+        else:
             total_liquid_precip = combined_forecasts['liquid'][iday]
             if combined_forecasts['snow'][iday] is not None:  # HACK subtract off a rough approximation of how much is falling as snow -- snowfall is in feet, and a foot is about an inch of liquid precip... right?
-                # print total_liquid_precip,
-                total_liquid_precip -= combined_forecasts['snow'][iday]
-                # print '--->', total_liquid_precip
+                total_liquid_precip = max(0., total_liquid_precip - combined_forecasts['snow'][iday])
             for il in range(int(n_big_number*total_liquid_precip) + 1):  # NOTE this gives you 1./n_big_number instead of zero
                 liquid_hist.append(iday)
                 liquid_weights.append(1./n_big_number)
-        if combined_forecasts['snow'][iday] is not None:
+
+        # snow
+        if combined_forecasts['snow'][iday] is None:
+            snow_hist.append(iday)
+            snow_weights.append(1./n_big_number)
+        else:
             for il in range(int(n_big_number*combined_forecasts['snow'][iday]) + 1):  # NOTE this gives you 1./n_big_number instead of zero
                 snow_hist.append(iday)
                 snow_weights.append(1./n_big_number)
@@ -115,6 +125,10 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
     # date_range = range(combined_forecasts['days'][0], combined_forecasts['days'][0] + n_days)
     fake_date_range = range(n_days)
 
+    if len(liquid_hist) == 0:
+        raise Exception('liquid hist data has length zero')
+    if len(snow_hist) == 0:
+        raise Exception('snow hist data has length zero')
     ax2.hist(liquid_hist, bins=n_days, range=(fake_date_range[0]-.6, fake_date_range[-1]+.4), weights=liquid_weights, rwidth=.5, color=liquid_color, alpha=0.5)  #, hatch='//')
     ax2.hist(snow_hist, bins=n_days, range=(fake_date_range[0]-.4, fake_date_range[-1]+.6), weights=snow_weights, rwidth=.5, color=snow_color, alpha=0.5)
 
@@ -129,7 +143,7 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
     itoday = None
     for ifc in fake_date_range:
         xticks.append(ifc)
-        if ifc < len(history['dates']):
+        if history is not None and ifc < len(history['dates']):
             if ifc == int(len(history) / 2) - 1:  # near the middle of the history
                 label = 'last %d days' % len(history['dates'])
             else:
@@ -183,7 +197,8 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
 
     for iday in range(len(forecasts['dates'])):
         if forecasts['liquid'][iday] is None:
-            xpos = float(iday + len(history['dates']) + 1) / len(combined_forecasts['dates']) - 0.03
+            history_len = 0 if history is None else len(history['dates'])
+            xpos = float(iday + history_len + 1) / len(combined_forecasts['dates']) - 0.03
             fig.text(xpos, 0.21, '%.0f%% precip' % forecasts['percent-precip'][iday], color='blue', fontsize=20, alpha=0.5)
             fig.text(xpos, 0.15, '%.0f%% cloud' % forecasts['percent-cloud'][iday], color='black', fontsize=20, alpha=0.5)
 
@@ -212,7 +227,7 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
 # ----------------------------------------------------------------------------------------
 def make_hists(forecasts, varname):
     hist, weights = [], []
-    n_big_number = 1e2
+    n_big_number = 5e2
     for ifc in range(len(forecasts)):
         fcast = forecasts[ifc]
         if fcast[varname] is None:  # missing forecast
