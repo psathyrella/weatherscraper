@@ -99,7 +99,7 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
 
     liquid_hist, liquid_weights = [], []
     snow_hist, snow_weights = [], []
-    n_big_number = 1e2
+    n_big_number = 5e2
     for iday in range(n_days):
         # liquid
         if combined_forecasts['liquid'][iday] is None:
@@ -227,7 +227,7 @@ def make_combined_noaa_plot(args, location_name, elevation, htmldir, history, to
 # ----------------------------------------------------------------------------------------
 def make_hists(forecasts, varname):
     hist, weights = [], []
-    n_big_number = 1e2
+    n_big_number = 5e2
     for ifc in range(len(forecasts)):
         fcast = forecasts[ifc]
         if fcast[varname] is None:  # missing forecast
