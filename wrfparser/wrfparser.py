@@ -350,6 +350,7 @@ parser.add_argument('--outdir', required=True)
 parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
 args = parser.parse_args()
 print 'TODO switch to reading/converting INIT time'
+print 'TODO use some python library instead of wget'
 stuff_to_run = []
 with open(args.config_fname) as cfgfile:
     reader = csv.DictReader(row for row in cfgfile if not row.startswith('#'))
