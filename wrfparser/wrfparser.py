@@ -276,7 +276,8 @@ def join_fcasts(domain, maptype, variable):
 
 # ----------------------------------------------------------------------------------------
 def get_htmlfname(domain, variable):
-    return args.outdir + '/' + domain + '_' + variable + '.html'
+    # NOTE *relative* path
+    return domain + '_' + variable + '.html'
 
 # ----------------------------------------------------------------------------------------
 def reverse_htmlfname(fname):
@@ -308,9 +309,9 @@ def write_index_html(fname, all_fnames):
 
 # ----------------------------------------------------------------------------------------
 def add_linkstrs(fname, all_fnames):
-    with open(fname) as htmlfile:
+    with open(args.outdir + '/' + fname) as htmlfile:
         lines = htmlfile.readlines()
-    with open(fname, 'w') as htmlfile:
+    with open(args.outdir + '/' + fname, 'w') as htmlfile:
         for line in lines:
             if '<body' in line:
                 # htmlfile.write('<center>\n')
@@ -323,7 +324,7 @@ def add_linkstrs(fname, all_fnames):
 # ----------------------------------------------------------------------------------------
 def write_html(domain, maptype, variable):
     imgfo = join_fcasts(domain, maptype, variable)
-    htmlfname = get_htmlfname(domain, variable)
+    htmlfname = args.outdir + '/' + get_htmlfname(domain, variable)
     # if not os.path.exists(os.path.dirname(htmlfname)):
     #     os.makedirs(os.path.dirname(htmlfname))
     with open(htmlfname, 'w') as htmlfile:
