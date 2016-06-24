@@ -203,14 +203,19 @@ def run_tesseract(img):
 
 # ----------------------------------------------------------------------------------------
 def get_single_date(img):
-    datestr = run_tesseract(img)
-    pdtlist = datestr[datestr.find('(') + 1 : datestr.find(')')].replace('\'', '').split()
-    dateinfo = {}
-    for ifmt in range(len(expected_date_format)):
-        dateinfo[expected_date_format[ifmt]] = pdtlist[ifmt]
-    convert_dateinfo(dateinfo)
-    imonth = list(calendar.month_abbr).index(dateinfo['month'])
-    return datetime.datetime(dateinfo['year'], imonth, dateinfo['monthday'], dateinfo['hours'])
+    try:
+        datestr = run_tesseract(img)
+        pdtlist = datestr[datestr.find('(') + 1 : datestr.find(')')].replace('\'', '').split()
+        dateinfo = {}
+        for ifmt in range(len(expected_date_format)):
+            dateinfo[expected_date_format[ifmt]] = pdtlist[ifmt]
+        convert_dateinfo(dateinfo)
+        imonth = list(calendar.month_abbr).index(dateinfo['month'])
+        dt = datetime.datetime(dateinfo['year'], imonth, dateinfo['monthday'], dateinfo['hours'])
+    except:
+        dt = datetime.datetime.now()
+        print '  tesseract failed on string:\n     \'%s\'\n     using %s instead' % (datestr, dt)
+    return dt
 
 # ----------------------------------------------------------------------------------------
 def set_dates(imgfo):
@@ -323,7 +328,9 @@ def write_html(domain, maptype, variable):
     #     os.makedirs(os.path.dirname(htmlfname))
     with open(htmlfname, 'w') as htmlfile:
         htmlfile.write(htmlheader)
-        htmlfile.write('<center><font color=red size=4>%s</font></center><br><br>\n' % titles[variable])
+        htmlfile.write('<center><font color=white size=2>%s</font></center>\n' % imgfo[0]['datetime'].strftime('%a %B %d %Y %H:%M PDT'))
+        htmlfile.write('<center><font color=red size=4>%s</font></center>\n' % titles[variable])
+        htmlfile.write('<br><br>\n')
         last_weekday = None
         for ifn in range(len(imgfo)):
             if variable == '24-hour-precip' and imgfo[ifn]['datetime'].hour == 5:
@@ -342,7 +349,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--outdir', required=True)
 parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
 args = parser.parse_args()
-
+print 'TODO switch to reading/converting INIT time'
 stuff_to_run = []
 with open(args.config_fname) as cfgfile:
     reader = csv.DictReader(row for row in cfgfile if not row.startswith('#'))
