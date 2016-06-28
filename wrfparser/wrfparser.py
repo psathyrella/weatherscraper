@@ -335,7 +335,7 @@ def write_html(domain, maptype, variable):
     #     os.makedirs(os.path.dirname(htmlfname))
     with open(htmlfname, 'w') as htmlfile:
         htmlfile.write(htmlheader)
-        htmlfile.write('<center><font color=white size=2>%s</font></center>\n' % imgfo[0]['datetime'].strftime('%a %B %d %Y %H:%M PDT'))
+        htmlfile.write('<center><font color=white size=2>first plot: %s</font></center>\n' % imgfo[0]['datetime'].strftime('%a %B %d %Y %H:%M PDT'))
         htmlfile.write('<center><font color=red size=4>%s</font></center>\n' % titles[variable])
         htmlfile.write('<br><br>\n')
         last_weekday = None
@@ -351,15 +351,13 @@ def write_html(domain, maptype, variable):
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
-def get_status(modeltype):
+def get_status(modeltype, cachefname=None):
     parser = etree.HTMLParser()
 
-    use_cache = False
-    cachefname = '/tmp/mm5rt-status.html'
-    if use_cache:
-        tree = etree.parse(cachefname, parser)
-    else:
-        tree = etree.parse(front_page_url, parser)
+    # tree = etree.parse(cachefname, parser)
+    tree = etree.parse(front_page_url, parser)
+
+    if cachefname is not None:
         tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
         with open(cachefname, 'w') as tmpfile:
             tmpfile.write(tmpstr)
@@ -372,16 +370,18 @@ def get_status(modeltype):
                 return 'unknown'
             if itd >= len(txtlist) - 2:
                 return 'unknown'
-            if txtlist[itd + 2] == 'complete':
+            status_text = txtlist[itd + 2]
+            if status_text == 'complete':
                 return 'complete'
+            elif status_text == 'not yet begun' or 'complete through forecast hour' in status_text:
+                return 'running'
             else:
-                print '\nstatus:\n    %s' % txtlist[itd + 2]
+                print '\nstatus is \'%s\', returning \'running\'' % txtlist[itd + 2]
                 return 'running'
 
+    # if os.path.exists(cachefname):
+    #     os.remove(cachefname)
     return 'unknown'
-
-    if os.path.exists(cachefname):
-        os.remove(cachefname)
 
 # ----------------------------------------------------------------------------------------
 def run():
@@ -413,6 +413,11 @@ print 'TODO switch to reading/converting INIT time'
 print 'TODO use some python library instead of wget'
 
 while True:
+    for mtype in ('WRF-GFS', 'Extended WRF-GFS'):
+        if get_status(mtype) == 'unknown':
+            cachefname = '%s-%s-status.html' % (mtype, datetime.datetime.now())
+            print 'unknown status for %s, writing to %s' % (mtype, cachefname)
+            get_status(mtype, cachefname=cachefname)
     while get_status('WRF-GFS') == 'running' or get_status('Extended WRF-GFS') == 'running':
         print '  forecasts are running, sleep for a bit'
         time.sleep(1800)  # 1800s is 30m
