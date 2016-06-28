@@ -6,7 +6,7 @@ To pull forecasts from NDFD and write the information to an html file:
 
 To add or remove locations, edit `all-locations.csv`.
 
-Or, just look at the current forecast [here](http://psathyrella.github.io/weatherscraper/weather.html).
+Or, just look at the current forecast [plots](http://psathyrella.github.io/weatherscraper/weather.html) and [maps](http://psathyrella.github.io/wrfparser/4km_3-hour-precip.html).
 
 Weatherscraper is free software under the GPL v3.
 
