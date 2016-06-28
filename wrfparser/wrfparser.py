@@ -373,10 +373,13 @@ def get_status(modeltype, cachefname=None):
             status_text = txtlist[itd + 2]
             if status_text == 'complete':
                 return 'complete'
-            elif status_text == 'not yet begun' or 'complete through forecast hour' in status_text:
-                return 'running'
+            elif status_text == 'not yet begun' \
+                 or 'complete through forecast hour' in status_text \
+                 or 'not begun' in status_text \
+                 or ('finished with the' in status_text and 'to hr' in status_text):
+                     return 'running'
             else:
-                print '\nstatus is \'%s\', returning \'running\'' % txtlist[itd + 2]
+                print '\nnot sure about status: \'%s\', returning \'running\'' % txtlist[itd + 2]
                 return 'running'
 
     # if os.path.exists(cachefname):
