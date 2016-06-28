@@ -3,14 +3,19 @@
 
 import Image
 import os
+import time
 import csv
 import sys
 import glob
 from subprocess import check_call, CalledProcessError
+from lxml import etree
+import urllib
 import datetime
 import calendar
 import pytesseract
 import argparse
+
+front_page_url = 'http://www.atmos.washington.edu/mm5rt'
 
 titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
@@ -148,7 +153,7 @@ def get_legend_fname(maptype, variable):
     legendfname = variable_category + '.svg'
     if not os.path.exists(args.outdir + '/' + legend_dir):
         os.makedirs(args.outdir + '/' + legend_dir)
-    check_call(['cp', '-v', wrfdir + '/' + legend_dir + '/' + legendfname, args.outdir + '/' + legend_dir + '/' + legendfname])
+    check_call(['cp', wrfdir + '/' + legend_dir + '/' + legendfname, args.outdir + '/' + legend_dir + '/' + legendfname])
 
     return legend_dir + '/' + legendfname
 
@@ -170,7 +175,8 @@ def download_image(domain, maptype, variable, hour):
         os.makedirs(os.path.dirname(outfname))
     url = get_url(domain, maptype, variable, hour)
     try:
-        check_call(['wget', '-O', outfname, url])
+        urllib.urlretrieve(url, outfname)
+        # check_call(['wget', '-O', outfname, url])
     except CalledProcessError:
         os.remove(outfname)
 
@@ -345,26 +351,71 @@ def write_html(domain, maptype, variable):
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
+def get_status(modeltype):
+    parser = etree.HTMLParser()
+
+    use_cache = False
+    cachefname = '/tmp/mm5rt-status.html'
+    if use_cache:
+        tree = etree.parse(cachefname, parser)
+    else:
+        tree = etree.parse(front_page_url, parser)
+        tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
+        with open(cachefname, 'w') as tmpfile:
+            tmpfile.write(tmpstr)
+
+    txtlist = [td.text.strip() for td in tree.findall('.//td') if td.text is not None and td.text.strip() != '']
+    for itd in range(len(txtlist)):
+        txt = txtlist[itd]
+        if txt == modeltype:  # shold look like [..., 'WRF-GFS', 'Status', 'complete', ...]  (or not complete, if it ain't complete)
+            if itd >= len(txtlist) - 1 or txtlist[itd + 1] != 'Status':
+                return 'unknown'
+            if itd >= len(txtlist) - 2:
+                return 'unknown'
+            if txtlist[itd + 2] == 'complete':
+                return 'complete'
+            else:
+                print '\nstatus:\n    %s' % txtlist[itd + 2]
+                return 'running'
+
+    return 'unknown'
+
+    if os.path.exists(cachefname):
+        os.remove(cachefname)
+
+# ----------------------------------------------------------------------------------------
+def run():
+    stuff_to_run = []
+    with open(args.config_fname) as cfgfile:
+        reader = csv.DictReader(row for row in cfgfile if not row.startswith('#'))
+        for line in reader:
+            stuff_to_run.append(line)
+
+    for line in stuff_to_run:
+        print line['domain'], line['variable']
+        download_all_images(line['domain'], line['maptype'], line['variable'])
+        write_html(line['domain'], line['maptype'], line['variable'])
+
+    htmlfnames = [get_htmlfname(line['domain'], line['variable']) for line in stuff_to_run]
+    for line in stuff_to_run:
+        add_linkstrs(get_htmlfname(line['domain'], line['variable']), htmlfnames)
+
+    write_index_html(args.outdir + '/index.html', htmlfnames)
+
+# ----------------------------------------------------------------------------------------
 wrfdir = os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument('--outdir', required=True)
 parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
 args = parser.parse_args()
+
 print 'TODO switch to reading/converting INIT time'
 print 'TODO use some python library instead of wget'
-stuff_to_run = []
-with open(args.config_fname) as cfgfile:
-    reader = csv.DictReader(row for row in cfgfile if not row.startswith('#'))
-    for line in reader:
-        stuff_to_run.append(line)
 
-for line in stuff_to_run:
-    print line['domain'], line['variable']
-    download_all_images(line['domain'], line['maptype'], line['variable'])
-    write_html(line['domain'], line['maptype'], line['variable'])
-
-htmlfnames = [get_htmlfname(line['domain'], line['variable']) for line in stuff_to_run]
-for line in stuff_to_run:
-    add_linkstrs(get_htmlfname(line['domain'], line['variable']), htmlfnames)
-
-write_index_html(args.outdir + '/index.html', htmlfnames)
+while True:
+    while get_status('WRF-GFS') == 'running' or get_status('Extended WRF-GFS') == 'running':
+        print '  forecasts are running, sleep for a bit'
+        time.sleep(1800)  # 1800s is 30m
+    run()
+    check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])
+    time.sleep(21600)  # 21600s is 6h
