@@ -345,7 +345,7 @@ def write_html(domain, maptype, variable):
             if domain != '12km' and last_weekday is not None and imgfo[ifn]['datetime'].weekday() != last_weekday:
                 htmlfile.write('<br>\n')
             last_weekday = imgfo[ifn]['datetime'].weekday()
-            htmlfile.write('<a href="' + get_url(domain, maptype, variable, imgfo[ifn]['fcast-hour']) + '"> <img alt="foop", src="' + get_fname(domain, maptype, variable, imgfo[ifn]['fcast-hour'], processed=True) + '", width="150"> </a>\n')
+            htmlfile.write('<a href="' + get_fname(domain, maptype, variable, imgfo[ifn]['fcast-hour'], processed=False) + '"> <img alt="foop", src="' + get_fname(domain, maptype, variable, imgfo[ifn]['fcast-hour'], processed=True) + '", width="150"> </a>\n')
         htmlfile.write('<br>\n')
         htmlfile.write('<center><a href="' + get_legend_fname(maptype, variable) + '"><img src="' + get_legend_fname(maptype, variable) + '", width="' + ('500' if 'wind' in variable else '350') + '"></a></center>\n')
         htmlfile.write(htmlfooter)
