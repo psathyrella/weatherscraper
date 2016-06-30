@@ -26,9 +26,10 @@ titles = {
 
 expected_date_format = ('hours', 'tz', 'weekday', 'monthday', 'month', 'year')
 def convert_dateinfo(dateinfo):
-    dateinfo['hours'] = int(dateinfo['hours'].replace('O', '0').replace('l', '1'))
-    dateinfo['monthday'] = int(dateinfo['monthday'])
-    dateinfo['year'] = 2000 + int(dateinfo['year'])
+    for key in ('hours', 'monthday', 'year'):  # all the integers
+        dateinfo[key] = dateinfo[key].replace('O', '0').replace('l', '1').replace('(', '')
+        dateinfo[key] = int(dateinfo[key])
+    dateinfo['year'] += 2000
 
 side_indices = {'left' : 0, 'right' : 1, 'top' : 2, 'bottom' : 3}
 base_margins = {  # (left, right, top, bottom)
@@ -412,8 +413,7 @@ parser.add_argument('--outdir', required=True)
 parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
 args = parser.parse_args()
 
-print 'TODO switch to reading/converting INIT time'
-print 'TODO use some python library instead of wget'
+print 'TODO switch to reading/converting INIT time (or maybe take the majority vote of a few?)'
 
 while True:
     for mtype in ('WRF-GFS', 'Extended WRF-GFS'):
