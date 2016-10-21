@@ -414,11 +414,15 @@ wrfdir = os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument('--outdir', required=True)
 parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
+parser.add_argument('--test', action='store_true')
 args = parser.parse_args()
 
 print 'TODO switch to reading/converting INIT time (or maybe take the majority vote of a few?)'
 
 while True:
+    if args.test:
+        run()
+        break
     for mtype in ('WRF-GFS', 'Extended WRF-GFS'):
         if get_status(mtype) == 'unknown':
             cachefname = '%s-%s-status.html' % (mtype, datetime.datetime.now())
