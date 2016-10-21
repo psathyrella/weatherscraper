@@ -38,7 +38,12 @@ base_margins = {  # (left, right, top, bottom)
     'entire-date-line' : (0, 0, 21, 855),
     'right-legend' : (850, 3, 100, 70)
 }
-specific_margins = {
+specific_margins = {  # (left, right, top, bottom)
+    'pacific-northwest' : {
+        'date' : (653, 123, 21, 855),
+        'full-date' : (643, 5, 21, 855),
+        'western-wa-sw-bc' : (275, 450, 220, 420),
+    },
     'washington' : {
         'date' : (653, 123, 21, 855),
         'full-date' : (643, 5, 21, 855),
@@ -58,6 +63,7 @@ def get_margins(maptype):
     return margins
     
 paste_sizes = {
+    'pacific-northwest' : (180, 260),
     'washington' : (175, 460),
     'western-washington' : (280, 604)
 }
@@ -66,6 +72,12 @@ paste_sizes = {
 # }
 
 paste_positions = {
+    'pacific-northwest' : {
+        'date' : (0, 0),
+        'western-wa-sw-bc' : (0, 28)
+        # 'howe-to-chehalis' : (0, 28),
+        # 'cascades' : (0, 107)
+    },
     'washington' : {
         'date' : (0, 0),
         'howe-to-chehalis' : (0, 28),
@@ -86,8 +98,9 @@ domain_codes = {
     '36km' : 'd1'
 }
 maptype_codes = {
-    'washington' : 'wa',
-    'western-washington' : 'ww'
+    'pacific-northwest' : '',
+    'washington' : 'wa_',
+    'western-washington' : 'ww_'
 }
 variable_codes = {
     '3-hour-precip' : 'pcp3',
@@ -140,7 +153,7 @@ def get_subimage(img, rname, margins):
 
 # ----------------------------------------------------------------------------------------
 def get_url(domain, maptype, variable, hour):
-    return base_url + '/images_' + domain_codes[domain] + '/' + maptype_codes[maptype] + '_' + variable_codes[variable] + '.' + ('%02d' % hour) + '.0000.gif'
+    return base_url + '/images_' + domain_codes[domain] + '/' + maptype_codes[maptype] + variable_codes[variable] + '.' + ('%02d' % hour) + '.0000.gif'
 
 # ----------------------------------------------------------------------------------------
 def get_legend_fname(maptype, variable):
@@ -150,6 +163,8 @@ def get_legend_fname(maptype, variable):
         variable_category = 'temp'
     elif 'wind' in variable:
         variable_category = 'wind'
+    elif 'cloud' in variable:
+        variable_category = 'cloud'
     else:
         assert False
 
