@@ -21,7 +21,8 @@ titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
     '24-hour-precip' : 'precip in previous 24 hours',
     'surface-temp' : 'surface temperature',
-    '10m-wind-speed' : '10m wind speed'
+    '10m-wind-speed' : '10m wind speed',
+    'integrated-cloud' : 'column-integrated cloud water'
 }
 
 expected_date_format = ('hours', 'tz', 'weekday', 'monthday', 'month', 'year')
@@ -92,7 +93,8 @@ variable_codes = {
     '3-hour-precip' : 'pcp3',
     '24-hour-precip' : 'pcp24',
     'surface-temp' : 'tsfc',
-    '10m-wind-speed' : 'wssfc2'
+    '10m-wind-speed' : 'wssfc2',
+    'integrated-cloud' : 'intcld'
 }
 expected_hours = {
     '12km' : {
@@ -103,7 +105,8 @@ expected_hours = {
     '4km' : {
         '3-hour-precip' : [h for h in range(6, 84, 3) if h != 3],
         'surface-temp' : [h for h in range(6, 84, 3) if h != 3],
-        '10m-wind-speed' : [h for h in range(6, 84, 3) if h != 3]
+        '10m-wind-speed' : [h for h in range(6, 84, 3) if h != 3],
+        'integrated-cloud' : [h for h in range(6, 84, 3) if h != 3]
     },
     '1.33km' : {
         '3-hour-precip' : [h for h in range(6, 72, 3) if h != 3],
