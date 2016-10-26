@@ -39,6 +39,11 @@ base_margins = {  # (left, right, top, bottom)
     'right-legend' : (850, 3, 100, 70)
 }
 specific_margins = {  # (left, right, top, bottom)
+    'washington-and-margins' : {
+        'date' : (653, 123, 21, 855),
+        'full-date' : (643, 5, 21, 855),
+        'western-wa-sw-bc' : (275, 450, 220, 420),
+    },
     'pacific-northwest' : {
         'date' : (653, 123, 21, 855),
         'full-date' : (643, 5, 21, 855),
@@ -63,6 +68,7 @@ def get_margins(maptype):
     return margins
     
 paste_sizes = {
+    'washington-and-margins' : (180, 260),
     'pacific-northwest' : (180, 260),
     'washington' : (175, 460),
     'western-washington' : (280, 604)
@@ -72,11 +78,13 @@ paste_sizes = {
 # }
 
 paste_positions = {
+    'washington-and-margins' : {
+        'date' : (0, 0),
+        'western-wa-sw-bc' : (0, 28)
+    },
     'pacific-northwest' : {
         'date' : (0, 0),
         'western-wa-sw-bc' : (0, 28)
-        # 'howe-to-chehalis' : (0, 28),
-        # 'cascades' : (0, 107)
     },
     'washington' : {
         'date' : (0, 0),
@@ -98,6 +106,7 @@ domain_codes = {
     '36km' : 'd1'
 }
 maptype_codes = {
+    'washington-and-margins' : '',
     'pacific-northwest' : '',
     'washington' : 'wa_',
     'western-washington' : 'ww_'
@@ -124,7 +133,8 @@ expected_hours = {
     '1.33km' : {
         '3-hour-precip' : [h for h in range(6, 72, 3) if h != 3],
         'surface-temp' : [h for h in range(6, 72, 3) if h != 3],
-        '10m-wind-speed' : [h for h in range(6, 72, 3) if h != 3]
+        '10m-wind-speed' : [h for h in range(6, 72, 3) if h != 3],
+        'integrated-cloud' : [h for h in range(6, 72, 3) if h != 3]
     }
 }
 
