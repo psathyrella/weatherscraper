@@ -39,10 +39,10 @@ base_margins = {  # (left, right, top, bottom)
     'right-legend' : (850, 3, 100, 70)
 }
 specific_margins = {  # (left, right, top, bottom)
-    'washington-and-margins' : {
-        'date' : (653, 123, 21, 855),
-        'full-date' : (643, 5, 21, 855),
-        'western-wa-sw-bc' : (275, 450, 220, 420),
+    'washington-plus' : {
+        'date' : (630, 123, 21, 855),
+        'full-date' : (630, 5, 21, 855),
+        'western-wa-sw-bc' : (275, 430, 270, 350)
     },
     'pacific-northwest' : {
         'date' : (653, 123, 21, 855),
@@ -68,7 +68,7 @@ def get_margins(maptype):
     return margins
     
 paste_sizes = {
-    'washington-and-margins' : (180, 260),
+    'washington-plus' : (200, 300),
     'pacific-northwest' : (180, 260),
     'washington' : (175, 460),
     'western-washington' : (280, 604)
@@ -78,8 +78,8 @@ paste_sizes = {
 # }
 
 paste_positions = {
-    'washington-and-margins' : {
-        'date' : (0, 0),
+    'washington-plus' : {
+        'full-date' : (0, 0),
         'western-wa-sw-bc' : (0, 28)
     },
     'pacific-northwest' : {
@@ -106,7 +106,7 @@ domain_codes = {
     '36km' : 'd1'
 }
 maptype_codes = {
-    'washington-and-margins' : '',
+    'washington-plus' : '',
     'pacific-northwest' : '',
     'washington' : 'wa_',
     'western-washington' : 'ww_'
