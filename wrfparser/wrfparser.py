@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # helps a bit: convert tmp.png -morphology erode:1 square:1 m.png
 
-import Image
+from PIL import Image  # install with pypi package 'pillow' (it's a PIL fork)
 import os
 import time
 import csv
@@ -12,8 +12,10 @@ from lxml import etree
 import urllib
 import datetime
 import calendar
-import pytesseract
+import pytesseract  # have to do both: pip --user pytesseract and sudo apt-get install tesseract-ocr
 import argparse
+import colored_traceback.always
+from dateutil import tz
 
 front_page_url = 'http://www.atmos.washington.edu/mm5rt'
 
@@ -32,9 +34,11 @@ def convert_dateinfo(dateinfo):
         dateinfo[key] = int(dateinfo[key])
     dateinfo['year'] += 2000
 
+typical_hours_between_init_and_zero_fcast_hour = 4
 side_indices = {'left' : 0, 'right' : 1, 'top' : 2, 'bottom' : 3}
 base_margins = {  # (left, right, top, bottom)
     'full' : (0, 0, 0, 0),
+    'init-time' : (500, 0, 0, 875),
     'entire-date-line' : (0, 0, 21, 855),
     'right-legend' : (850, 3, 100, 70)
 }
@@ -200,6 +204,8 @@ def get_fname(domain, maptype, variable, hour, processed=False):
 # ----------------------------------------------------------------------------------------
 def download_image(domain, maptype, variable, hour):
     outfname = args.outdir + '/' + get_fname(domain, maptype, variable, hour)
+    if args.no_download:
+        return
     if not os.path.exists(os.path.dirname(outfname)):
         os.makedirs(os.path.dirname(outfname))
     url = get_url(domain, maptype, variable, hour)
@@ -207,6 +213,7 @@ def download_image(domain, maptype, variable, hour):
         urllib.urlretrieve(url, outfname)
         # check_call(['wget', '-O', outfname, url])
     except CalledProcessError:
+        print '  failed retrieving %s' % url
         os.remove(outfname)
 
 # ----------------------------------------------------------------------------------------
@@ -222,45 +229,61 @@ def join_image_pieces(subimages, maptype):
         joined_image.paste(subimages[name], ppos)
     return joined_image
 
-# ----------------------------------------------------------------------------------------
-def run_tesseract(img):
-    return_str = pytesseract.image_to_string(img)
-    # tmptiff = '/tmp/tmp-date-image.tiff'
-    # tmptxt = '/tmp/tmp-date-image'
-    # img.save(tmptiff)
-    # check_call(['tesseract', tmptiff, tmptxt])
-    # with open(tmptxt + '.txt') as txtfile:
-    #     return_str = txtfile.read()
-    # os.remove(tmptiff)
-    # os.remove(tmptxt + '.txt')
-    print return_str
-    return return_str
+# # ----------------------------------------------------------------------------------------
+# def run_tesseract(img):
+#     return_str = pytesseract.image_to_string(img)
+#     # tmptiff = '/tmp/tmp-date-image.tiff'
+#     # tmptxt = '/tmp/tmp-date-image'
+#     # img.save(tmptiff)
+#     # check_call(['tesseract', tmptiff, tmptxt])
+#     # with open(tmptxt + '.txt') as txtfile:
+#     #     return_str = txtfile.read()
+#     # os.remove(tmptiff)
+#     # os.remove(tmptxt + '.txt')
+#     print return_str
+#     return return_str
 
 # ----------------------------------------------------------------------------------------
 def get_single_date(img):
     try:
-        datestr = run_tesseract(img)
-        pdtlist = datestr[datestr.find('(') + 1 : datestr.find(')')].replace('\'', '').split()
-        dateinfo = {}
-        for ifmt in range(len(expected_date_format)):
-            dateinfo[expected_date_format[ifmt]] = pdtlist[ifmt]
-        convert_dateinfo(dateinfo)
-        imonth = list(calendar.month_abbr).index(dateinfo['month'])
-        dt = datetime.datetime(dateinfo['year'], imonth, dateinfo['monthday'], dateinfo['hours'])
+        datestr = pytesseract.image_to_string(img)
     except:
-        dt = datetime.datetime.now()
-        print '  tesseract failed on string:\n     \'%s\'\n     using %s instead' % (datestr, dt)
-    return dt
+        print '  failed running tesseract'
+        return None
+    else:
+        try:
+            # old version for full non-init date line:
+            # datelist = datestr[datestr.find('(') + 1 : datestr.find(')')].replace('\'', '').split()
+            # new version for init time:
+            datelist = datestr.replace('_', '').split()  # tesseract seems to lose the 'Init:' for some reason
+            dateinfo = {}
+            for ifmt in range(len(expected_date_format)):
+                dateinfo[expected_date_format[ifmt]] = datelist[ifmt]
+            convert_dateinfo(dateinfo)
+            imonth = list(calendar.month_abbr).index(dateinfo['month'])
+            utc_init_time = datetime.datetime(dateinfo['year'], imonth, dateinfo['monthday'], dateinfo['hours'])
+            utc_init_time = utc_init_time.replace(tzinfo=tz.gettz('UTC'))  # tell the datetime object that it's in UTC time zone since datetime objects are 'naive' by default
+            pdt_init_time = utc_init_time.astimezone(tz.gettz('PDT'))
+        except:
+            print '  couldn\'t convert tesseract output string \'%s\'' % datestr
+            return None
+    return pdt_init_time
 
 # ----------------------------------------------------------------------------------------
 def set_dates(imgfo):
-    first_fcast_hour, first_datetime = None, None  # first fcast hour and its corresponding date
+    # first find one date that we can get
+    init_time = None
     for iimg in range(len(imgfo)):
-        if first_datetime is None:
-            first_datetime = get_single_date(imgfo[iimg]['subimages']['entire-date-line'])
-            first_fcast_hour = imgfo[iimg]['fcast-hour']
-        imgfo[iimg]['datetime'] = first_datetime + datetime.timedelta(hours=(imgfo[iimg]['fcast-hour'] - first_fcast_hour))
-        # print imgfo[iimg]['fcast-hour'], imgfo[iimg]['datetime'].weekday()
+        if init_time is None:
+            init_time = get_single_date(imgfo[iimg]['subimages']['init-time'])
+            break
+    if init_time is None:  # couldn't get it from any of the images
+        init_time = datetime.datetime.now() - datetime.timedelta(hours=typical_hours_between_init_and_zero_fcast_hour)
+
+    # then set everybody's info accordingly
+    for iimg in range(len(imgfo)):
+        imgfo[iimg]['datetime'] = init_time + datetime.timedelta(hours=(imgfo[iimg]['fcast-hour']))  #  - known_fcast_hour))
+        # print '  %2d  %s' % (imgfo[iimg]['fcast-hour'], imgfo[iimg]['datetime'].strftime('%a %H:%M'))
 
 # ----------------------------------------------------------------------------------------
 def dummy_image():
@@ -290,7 +313,7 @@ def get_fcast_image_info(domain, maptype, variable, hour):
     # sys.exit()
 
     # # write individual subimage
-    # subimages['right-legend'].save('tmp.png')
+    # subimages['init-time'].save('tmp.png')
     # sys.exit()
 
     processed_fname = args.outdir + '/' + get_fname(domain, maptype, variable, hour, processed=True)
@@ -439,13 +462,14 @@ wrfdir = os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument('--outdir', required=True)
 parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
-parser.add_argument('--test', action='store_true')
+parser.add_argument('--no-sleep', action='store_true')
+parser.add_argument('--no-download', action='store_true')
 args = parser.parse_args()
 
 print 'TODO switch to reading/converting INIT time (or maybe take the majority vote of a few?)'
 
 while True:
-    if args.test:
+    if args.no_sleep:
         run()
         break
     for mtype in ('WRF-GFS', 'Extended WRF-GFS'):
