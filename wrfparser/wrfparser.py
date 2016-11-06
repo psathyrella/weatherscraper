@@ -446,9 +446,13 @@ def check_all_models_complete():
     if args.test:
         return True
 
+    cachedir = wrfdir + '/_cache'
+    if not os.path.exists(cachedir):
+        os.makedirs(cachedir)
+
     statuses = []
     for mstr in model_strings:
-        cachefname = wrfdir + '/_cache/%s-%s-status.html' % (mstr, datetime.datetime.now())
+        cachefname = cachedir + '/%s-%s-status.html' % (mstr, datetime.datetime.now().__str__().replace(' ', '_'))
         statuses.append(get_status(mstr, cachefname=cachefname))
         if statuses[-1] == 'unknown':
             print 'unknown status for %s, wrote html to %s' % (mstr, cachefname)
