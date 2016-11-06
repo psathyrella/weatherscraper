@@ -16,6 +16,7 @@ import pytesseract
 import argparse
 
 front_page_url = 'http://www.atmos.washington.edu/mm5rt'
+model_strings = ('WRF-GFS', 'Extended WRF-GFS')
 
 titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
@@ -381,17 +382,21 @@ def write_html(domain, maptype, variable):
 
 # ----------------------------------------------------------------------------------------
 def get_status(modeltype, cachefname=None):
+    # note: you really don't want to download images while the fcasts are running, since they go through their file system gradually replacing files as they run (i.e. you'll download an inconsistent series of images)
     parser = etree.HTMLParser()
 
     # tree = etree.parse(cachefname, parser)
-    tree = etree.parse(front_page_url, parser)
+    try:
+        tree = etree.parse(front_page_url, parser)
+        if cachefname is not None:  # write html to a file in case we want it later
+            tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
+            with open(cachefname, 'w') as tmpfile:
+                tmpfile.write(tmpstr)
+        txtlist = [td.text.strip() for td in tree.findall('.//td') if td.text is not None and td.text.strip() != '']
+    except:
+        print '    failed parsing etree for %s' % front_page_url
+        return 'unknown'
 
-    if cachefname is not None:
-        tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
-        with open(cachefname, 'w') as tmpfile:
-            tmpfile.write(tmpstr)
-
-    txtlist = [td.text.strip() for td in tree.findall('.//td') if td.text is not None and td.text.strip() != '']
     for itd in range(len(txtlist)):
         txt = txtlist[itd]
         if txt == modeltype:  # shold look like [..., 'WRF-GFS', 'Status', 'complete', ...]  (or not complete, if it ain't complete)
@@ -411,9 +416,31 @@ def get_status(modeltype, cachefname=None):
                 print '\nnot sure about status: \'%s\', returning \'running\'' % txtlist[itd + 2]
                 return 'running'
 
-    # if os.path.exists(cachefname):
-    #     os.remove(cachefname)
     return 'unknown'
+
+# ----------------------------------------------------------------------------------------
+def check_all_models_complete():
+    if args.test:
+        return True
+
+    statuses = []
+    for mstr in model_strings:
+        cachefname = wrfdir + '/_cache/%s-%s-status.html' % (mstr, datetime.datetime.now())
+        statuses.append(get_status(mstr, cachefname=cachefname))
+        if statuses[-1] == 'unknown':
+            print 'unknown status for %s, wrote html to %s' % (mstr, cachefname)
+            return False
+        else:
+            if os.path.exists(cachefname):
+                os.remove(cachefname)
+            else:
+                print 'wtf? cache file %s doesn\'t exist' % cachefname
+            if statuses[-1] == 'running':
+                return False
+    if statuses.count('complete') != len(statuses):
+        print 'wtf? fell through, but not all statuses are \'complete\': %s' % statuses
+        return False
+    return True
 
 # ----------------------------------------------------------------------------------------
 def run():
@@ -425,7 +452,8 @@ def run():
 
     for line in stuff_to_run:
         print line['domain'], line['variable']
-        download_all_images(line['domain'], line['maptype'], line['variable'])
+        if not args.no_download:  # if the images aren't there I think it will still try to download them one by one
+            download_all_images(line['domain'], line['maptype'], line['variable'])
         write_html(line['domain'], line['maptype'], line['variable'])
 
     htmlfnames = [get_htmlfname(line['domain'], line['variable']) for line in stuff_to_run]
@@ -440,22 +468,22 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--outdir', required=True)
 parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
 parser.add_argument('--test', action='store_true')
+parser.add_argument('--no-download', action='store_true')
 args = parser.parse_args()
 
 print 'TODO switch to reading/converting INIT time (or maybe take the majority vote of a few?)'
 
 while True:
-    if args.test:
-        run()
-        break
-    for mtype in ('WRF-GFS', 'Extended WRF-GFS'):
-        if get_status(mtype) == 'unknown':
-            cachefname = '%s-%s-status.html' % (mtype, datetime.datetime.now())
-            print 'unknown status for %s, writing to %s' % (mtype, cachefname)
-            get_status(mtype, cachefname=cachefname)
-    while get_status('WRF-GFS') == 'running' or get_status('Extended WRF-GFS') == 'running':
+    all_complete = check_all_models_complete()
+    while not all_complete:
         print '  forecasts are running, sleep for a bit'
         time.sleep(1800)  # 1800s is 30m
+        all_complete = check_all_models_complete()
+
     run()
-    check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])
-    time.sleep(21600)  # 21600s is 6h
+
+    if args.test:
+        break
+    else:
+        check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])
+        time.sleep(21600)  # 21600s is 6h
