@@ -6,8 +6,9 @@ if [ "$repodir" == "" ] || ! [ -d $repodir ]; then
     exit 1
 fi
 
+echo "  pull/add/commit/push in $repodir"
 cd $repodir
-git pull origin master
+git pull --quiet origin master
 git add --all wrfparser/
-git commit -m "forecasts pushed on `date`"
-git push origin master
+git commit --quiet -m "forecasts pushed on `date`"
+git push --quiet origin master
