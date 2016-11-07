@@ -506,6 +506,8 @@ parser.add_argument('--no-download', action='store_true')
 parser.add_argument('--no-push', action='store_true')
 args = parser.parse_args()
 
+running_sleep_time = 1800  # 1800s = 30m
+just_finished_sleep_time = 21600  # 21600s is 6h
 if args.test:
     args.no_sleep = True
     args.no_download = True
@@ -514,12 +516,12 @@ if args.test:
 while True:
     all_complete = check_all_models_complete()
     while not args.no_sleep and not all_complete:
-        print '  forecasts are running, sleep for a bit'
-        time.sleep(1800)  # 1800s is 30m
+        print '  %s: forecasts are running, sleep for %d min' % (datetime.datetime.now().strftime('%a %B %d %H:%M'), int(running_sleep_time / 60.))
+        time.sleep(running_sleep_time)
         all_complete = check_all_models_complete()
 
     run()
 
     if not args.no_push:
         check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])
-        time.sleep(21600)  # 21600s is 6h
+        time.sleep(just_finished_sleep_time)
