@@ -39,7 +39,7 @@ typical_hours_between_init_and_zero_fcast_hour = 4
 side_indices = {'left' : 0, 'right' : 1, 'top' : 2, 'bottom' : 3}
 base_margins = {  # (left, right, top, bottom)
     'full' : (0, 0, 0, 0),
-    'init-time' : (500, 0, 0, 875),
+    'init-time' : (500, 0, 0, 878),
     'entire-date-line' : (0, 0, 21, 855),
     'right-legend' : (850, 3, 100, 70)
 }
@@ -248,6 +248,8 @@ def join_image_pieces(subimages, maptype):
 def get_single_date(img):
     try:
         datestr = pytesseract.image_to_string(img)
+        # img.save(os.getenv('www') + '/tmp/tmp.png')
+        # sys.exit()
     except:
         print '  failed running tesseract'
         return None
@@ -256,7 +258,7 @@ def get_single_date(img):
             # old version for full non-init date line:
             # datelist = datestr[datestr.find('(') + 1 : datestr.find(')')].replace('\'', '').split()
             # new version for init time:
-            datelist = datestr.translate(None, '_\'\"();:').split()
+            datelist = datestr.translate(None, '_\'\"();:{}').split()
             if 'UTC' not in datelist:
                 print '  \'UTC\' not found in %s' % datestr
                 return None
@@ -525,3 +527,6 @@ while True:
     if not args.no_push:
         check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])
         time.sleep(just_finished_sleep_time)
+
+    if args.test:
+        break
