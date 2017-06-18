@@ -47,7 +47,8 @@ specific_margins = {  # (left, right, top, bottom)
     'washington-plus' : {
         'date' : (630, 123, 21, 855),
         'full-date' : (630, 5, 21, 855),
-        'western-wa-sw-bc' : (275, 430, 270, 350)
+        'howe-to-chehalis' : (250, 530, 110, 740),
+        'western-wa-sw-bc' : (325, 430, 155, 500),
     },
     'pacific-northwest' : {
         'date' : (653, 123, 21, 855),
@@ -72,20 +73,21 @@ def get_margins(maptype):
     margins.update(specific_margins[maptype])
     return margins
     
-paste_sizes = {
-    'washington-plus' : (200, 300),
+paste_sizes = {  # final/total image sizes
+    'washington-plus' : (160, 330),
     'pacific-northwest' : (180, 260),
     'washington' : (175, 460),
     'western-washington' : (280, 604)
 }
-# rescale_pixels = {
-#     'full-date' : (150, 20)
-# }
+rescale_pixels = {
+    'full-date' : (150, 20)
+}
 
-paste_positions = {
+paste_positions = {  # (x, y) coords of upper left corner
     'washington-plus' : {
         'full-date' : (0, 0),
-        'western-wa-sw-bc' : (0, 28)
+        'howe-to-chehalis' : (0, 25),
+        'western-wa-sw-bc' : (0, 80)
     },
     'pacific-northwest' : {
         'date' : (0, 0),
@@ -162,8 +164,8 @@ def get_subimage(img, rname, margins):
     width, height = img.size
     bbox = (tmpco['left'], tmpco['top'], width - tmpco['right'], height - tmpco['bottom'])
     subimg = img.crop(bbox)
-    # if rname in rescale_pixels:
-    #     subimg = subimg.resize(rescale_pixels[rname])
+    if rname in rescale_pixels:  # doesn't work for shit (well, it's too few pixels so it's hard to read the date)
+        subimg = subimg.resize(rescale_pixels[rname], resample=Image.LANCZOS)
     return subimg
 
 # ----------------------------------------------------------------------------------------
@@ -225,9 +227,9 @@ def download_all_images(domain, maptype, variable):
 # ----------------------------------------------------------------------------------------
 def join_image_pieces(subimages, maptype):
     # joined_image = Image.new("RGB", (subimages['cascades'].size[0], subimages['cascades'].size[1] + subimages['date'].size[1]))
-    joined_image = Image.new("RGB", paste_sizes[maptype])
+    joined_image = Image.new("RGB", paste_sizes[maptype])  # (width, height) in pixels
     for name, ppos in paste_positions[maptype].items():
-        joined_image.paste(subimages[name], ppos)
+        joined_image.paste(subimages[name], ppos)  # second arg is 2-tuple giving upper left corner (can also be a 4-tuple giving the (left, upper, right, lower) pixel coordinate (in latter case, size of pasted image must match)
     return joined_image
 
 # # ----------------------------------------------------------------------------------------
@@ -322,8 +324,9 @@ def get_fcast_image_info(domain, maptype, variable, hour):
     # sys.exit()
 
     # # write individual subimage
-    # subimages['init-time'].save('tmp.png')
-    # sys.exit()
+    # if hour == 42:
+    #     subimages['howe-to-chehalis'].save('tmp.png')
+    #     sys.exit()
 
     processed_fname = args.outdir + '/' + get_fname(domain, maptype, variable, hour, processed=True)
     if not os.path.exists(os.path.dirname(processed_fname)):
