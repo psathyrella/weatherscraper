@@ -10,3 +10,6 @@ domain,maptype,variable
 1.33km,western-washington,surface-temp
 1.33km,western-washington,10m-wind-speed
 1.33km,washington-plus,integrated-cloud
+12km,12km-domain,3-hour-precip
+12km,12km-domain,integrated-cloud
+# 4km,4km-domain,3-hour-precip

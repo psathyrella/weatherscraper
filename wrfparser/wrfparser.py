@@ -65,7 +65,12 @@ specific_margins = {  # (left, right, top, bottom)
         'date' : (630, 123, 21, 855),
         'full-date' : (630, 5, 21, 855),
         'cascades' : (550, 70, 120, 200)
-    }
+    },
+    '12km-domain' : {
+        'date' : (630, 123, 21, 855),
+        'full-date' : (630, 5, 21, 855),
+        'wa-sw-bc' : (350, 200, 130, 450),
+    },
 }
 # ----------------------------------------------------------------------------------------
 def get_margins(maptype):
@@ -77,31 +82,36 @@ paste_sizes = {  # final/total image sizes
     'washington-plus' : (160, 330),
     'pacific-northwest' : (180, 260),
     'washington' : (175, 460),
-    'western-washington' : (280, 604)
+    'western-washington' : (280, 604),
+    '12km-domain' : (300, 350),
 }
 rescale_pixels = {
-    'full-date' : (150, 20)
+    'full-date' : (150, 20),
 }
 
 paste_positions = {  # (x, y) coords of upper left corner
     'washington-plus' : {
         'full-date' : (0, 0),
         'howe-to-chehalis' : (0, 25),
-        'western-wa-sw-bc' : (0, 80)
+        'western-wa-sw-bc' : (0, 80),
     },
     'pacific-northwest' : {
         'date' : (0, 0),
-        'western-wa-sw-bc' : (0, 28)
+        'western-wa-sw-bc' : (0, 28),
     },
     'washington' : {
         'date' : (0, 0),
         'howe-to-chehalis' : (0, 28),
-        'cascades' : (0, 107)
+        'cascades' : (0, 107),
     },
     'western-washington' : {
         'full-date' : (0, 0),
-        'cascades' : (0, 30)
-    }
+        'cascades' : (0, 30),
+    },
+    '12km-domain' : {
+        'date' : (0, 0),
+        'wa-sw-bc' : (0, 30),
+    },
 }
 
 base_url = 'http://www.atmos.washington.edu/wrfrt/data/timeindep'
@@ -116,8 +126,10 @@ maptype_codes = {
     'washington-plus' : '',
     'pacific-northwest' : '',
     'washington' : 'wa_',
-    'western-washington' : 'ww_'
+    'western-washington' : 'ww_',
+    '12km-domain' : '',
 }
+# http://www.atmos.washington.edu/wrfrt/rt/load.cgi?latest+YYYYMMDDHH/images_d2/pcp3.00.0000.gif
 variable_codes = {
     '3-hour-precip' : 'pcp3',
     '24-hour-precip' : 'pcp24',
@@ -128,20 +140,22 @@ variable_codes = {
 expected_hours = {
     '12km' : {
         '24-hour-precip' : [h for h in range(24, 180, 12)],
+        '3-hour-precip' : [h for h in range(6, 84, 3) if h != 3],
         'surface-temp' : [h for h in range(24, 180, 12)],
-        '10m-wind-speed' : [h for h in range(24, 180, 12)]
+        '10m-wind-speed' : [h for h in range(24, 180, 12)],
+        'integrated-cloud' : [h for h in range(6, 84, 3) if h != 3],
     },
     '4km' : {
         '3-hour-precip' : [h for h in range(6, 84, 3) if h != 3],
         'surface-temp' : [h for h in range(6, 84, 3) if h != 3],
         '10m-wind-speed' : [h for h in range(6, 84, 3) if h != 3],
-        'integrated-cloud' : [h for h in range(6, 84, 3) if h != 3]
+        'integrated-cloud' : [h for h in range(6, 84, 3) if h != 3],
     },
     '1.33km' : {
         '3-hour-precip' : [h for h in range(6, 72, 3) if h != 3],
         'surface-temp' : [h for h in range(6, 72, 3) if h != 3],
         '10m-wind-speed' : [h for h in range(6, 72, 3) if h != 3],
-        'integrated-cloud' : [h for h in range(6, 72, 3) if h != 3]
+        'integrated-cloud' : [h for h in range(6, 72, 3) if h != 3],
     }
 }
 
@@ -249,7 +263,7 @@ def join_image_pieces(subimages, maptype):
 # ----------------------------------------------------------------------------------------
 def get_single_date(img):
     try:
-        datestr = pytesseract.image_to_string(img)
+        datestr = str(pytesseract.image_to_string(img))
         # img.save(os.getenv('www') + '/tmp/tmp.png')
         # sys.exit()
     except:
@@ -406,7 +420,7 @@ def write_html(domain, maptype, variable):
         for ifn in range(len(imgfo)):
             if variable == '24-hour-precip' and imgfo[ifn]['datetime'].hour == 5:
                 continue
-            if domain != '12km' and last_weekday is not None and imgfo[ifn]['datetime'].weekday() != last_weekday:
+            if last_weekday is not None and imgfo[ifn]['datetime'].weekday() != last_weekday:
                 htmlfile.write('<br>\n')
             last_weekday = imgfo[ifn]['datetime'].weekday()
             htmlfile.write('<a href="' + get_fname(domain, maptype, variable, imgfo[ifn]['fcast-hour'], processed=False) + '"> <img alt="foop", src="' + get_fname(domain, maptype, variable, imgfo[ifn]['fcast-hour'], processed=True) + '", width="150"> </a>\n')
@@ -531,5 +545,5 @@ while True:
         check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])
         time.sleep(just_finished_sleep_time)
 
-    if args.test:
+    if args.test or args.no_sleep:
         break
