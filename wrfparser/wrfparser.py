@@ -179,7 +179,7 @@ def get_subimage(img, rname, margins):
     bbox = (tmpco['left'], tmpco['top'], width - tmpco['right'], height - tmpco['bottom'])
     subimg = img.crop(bbox)
     if rname in rescale_pixels:  # doesn't work for shit (well, it's too few pixels so it's hard to read the date)
-        subimg = subimg.resize(rescale_pixels[rname], resample=Image.LANCZOS)
+        subimg = subimg.resize(rescale_pixels[rname]) #, resample=Image.LANCZOS)
     return subimg
 
 # ----------------------------------------------------------------------------------------
@@ -429,7 +429,7 @@ def write_html(domain, maptype, variable):
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
-def get_status(modeltype, cachefname=None):
+def get_status(modeltype, cachefname=None, debug=False):
     # note: you really don't want to download images while the fcasts are running, since they go through their file system gradually replacing files as they run (i.e. you'll download an inconsistent series of images)
     parser = etree.HTMLParser()
 
@@ -467,7 +467,7 @@ def get_status(modeltype, cachefname=None):
     return 'unknown'
 
 # ----------------------------------------------------------------------------------------
-def check_all_models_complete():
+def check_all_models_complete(debug=False):
     if args.test:
         return True
 
@@ -478,7 +478,9 @@ def check_all_models_complete():
     statuses = []
     for mstr in model_strings:
         cachefname = cachedir + '/%s-%s-status.html' % (mstr, datetime.datetime.now().__str__().replace(' ', '_'))
-        statuses.append(get_status(mstr, cachefname=cachefname))
+        statuses.append(get_status(mstr, cachefname=cachefname, debug=debug))
+        if debug:
+            print '%s %s %s' % (mstr, cachefname, statuses[-1])
         if statuses[-1] == 'unknown':
             print 'unknown status for %s, wrote html to %s' % (mstr, cachefname)
             return False
@@ -543,7 +545,8 @@ while True:
 
     if not args.no_push:
         check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])
-        time.sleep(just_finished_sleep_time)
+        if not args.no_sleep:
+            time.sleep(just_finished_sleep_time)
 
     if args.test or args.no_sleep:
         break
