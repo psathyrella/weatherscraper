@@ -16,9 +16,10 @@ import pytesseract  # have to do both: pip --user pytesseract and sudo apt-get i
 import argparse
 import colored_traceback.always
 from dateutil import tz
+import tempfile
 
-front_page_url = 'http://www.atmos.washington.edu/mm5rt'
-model_strings = ('WRF-GFS', 'Extended WRF-GFS')
+front_page_url = 'https://atmos.washington.edu/wrfrt/data/run_status.html'
+model_strings = ['WRF-GFS'] #, 'Extended WRF-GFS']
 
 titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
@@ -429,39 +430,80 @@ def write_html(domain, maptype, variable):
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
+def get_run_status_times(td):
+    if 'STATUS' not in td.text:
+        raise Exception('unexpected status line \'%s\'' % td.text)
+    txtlist = td.text.split()
+
+    if txtlist[:2] != ['STATUS', 'of']:
+        raise Exception('unexpected status line %s' % txtlist[:2])
+    run_time_str = txtlist[2]
+    if len(run_time_str) != 10:
+        raise Exception('couldn\'t convert run time %s' % run_time_str)
+    year = int(run_time_str[:4])  # NOTE used below for status time
+    month = int(run_time_str[4:6])
+    day = int(run_time_str[6:8])
+    hour = int(run_time_str[8:10])
+    run_time = datetime.datetime(year=year, month=month, day=day, hour=hour)  # initialization time, I think (probably utc)
+
+    if txtlist[3:7] != ['UW', 'runs', 'as', 'of']:
+        raise Exception('unexpected status line %s' % txtlist[3:7])
+
+    if len(txtlist) != 12:
+        raise Exception('unexpected status line %s' % txtlist[7:])
+    status_time_list = txtlist[7:12]
+    if len(status_time_list) != 5:
+        raise Exception('unexpected status time \'%s\'' % status_time_list)
+    hour, minute = [int(val) for val in status_time_list[0].split(':')]
+    ampm = status_time_list[1]
+    if ampm == 'pm':
+        hour += 12
+    elif ampm != 'am':
+        raise Exception('unexpected ampm \'%s\'' % ampm)
+    tzstr = status_time_list[2]
+    if tzstr != 'PDT':
+        raise Exception('unexpected time zone \'%s\'' % tzstr)
+    month_str = status_time_list[3]
+    month = int(list(calendar.month_abbr).index(month_str))
+    day = int(status_time_list[4])
+    status_time = datetime.datetime(year=year, month=month, day=day, hour=hour)  # time that it wrote this status file NOTE using year from run time above
+
+    return run_time, status_time
+
+# ----------------------------------------------------------------------------------------
 def get_status(modeltype, cachefname=None, debug=False):
     # note: you really don't want to download images while the fcasts are running, since they go through their file system gradually replacing files as they run (i.e. you'll download an inconsistent series of images)
     parser = etree.HTMLParser()
 
+    # cachefname = '/home/dralph/weatherscraper/wrfparser/_cache/WRF-GFS-2017-09-09_11:33:03.973294-status.html'
     # tree = etree.parse(cachefname, parser)
-    try:
-        tree = etree.parse(front_page_url, parser)
-        if cachefname is not None:  # write html to a file in case we want it later
-            tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
-            with open(cachefname, 'w') as tmpfile:
-                tmpfile.write(tmpstr)
-        txtlist = [td.text.strip() for td in tree.findall('.//td') if td.text is not None and td.text.strip() != '']
-    except:
-        print '    failed parsing etree for %s' % front_page_url
-        return 'unknown'
+    with tempfile.NamedTemporaryFile() as tmpfile:
+        if debug:
+            print '    retrieving %s' % front_page_url
+        urllib.urlretrieve(front_page_url, tmpfile.name)
+        tree = etree.parse(tmpfile, parser)
+    if cachefname is not None:  # write html to a file in case we want it later
+        if debug:
+            print '    writing html to %s' % cachefname
+        tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
+        with open(cachefname, 'w') as tmpfile:
+            tmpfile.write(tmpstr)
 
-    for itd in range(len(txtlist)):
-        txt = txtlist[itd]
-        if txt == modeltype:  # shold look like [..., 'WRF-GFS', 'Status', 'complete', ...]  (or not complete, if it ain't complete)
-            if itd >= len(txtlist) - 1 or txtlist[itd + 1] != 'Status':
-                return 'unknown'
-            if itd >= len(txtlist) - 2:
-                return 'unknown'
-            status_text = txtlist[itd + 2]
-            if status_text == 'complete':
+    tdlist = list(tree.findall('.//td'))
+    run_time, status_time = get_run_status_times(tdlist[0])
+    if debug:
+        print '       run time: %s ' % run_time
+        print '    status time: %s ' % status_time
+    if len(tdlist) % 2 != 1:
+        raise Exception('bad tdlist length %d' % len(tdlist))
+    tdpairs = [(tdlist[i], tdlist[i + 1]) for i in range(1, len(tdlist), 2)]
+    for nametd, statustd in tdpairs:
+        hlink = nametd.find('.//a')
+        if hlink.text == modeltype:
+            print '    %s: %s' % (hlink.text, statustd.text)
+            if statustd.text == 'complete':
                 return 'complete'
-            elif status_text == 'not yet begun' \
-                 or 'complete through forecast hour' in status_text \
-                 or 'not begun' in status_text \
-                 or ('finished with the' in status_text and 'to hr' in status_text):
-                     return 'running'
             else:
-                print '\nnot sure about status: \'%s\', returning \'running\'' % txtlist[itd + 2]
                 return 'running'
 
     return 'unknown'
@@ -477,23 +519,24 @@ def check_all_models_complete(debug=False):
 
     statuses = []
     for mstr in model_strings:
-        cachefname = cachedir + '/%s-%s-status.html' % (mstr, datetime.datetime.now().__str__().replace(' ', '_'))
-        statuses.append(get_status(mstr, cachefname=cachefname, debug=debug))
+        status = get_status(mstr, debug=debug)
         if debug:
-            print '%s %s %s' % (mstr, cachefname, statuses[-1])
-        if statuses[-1] == 'unknown':
-            print 'unknown status for %s, wrote html to %s' % (mstr, cachefname)
+            print '  %s: %s' % (mstr, status)
+
+        if status == 'running':
             return False
-        else:
-            if os.path.exists(cachefname):
-                os.remove(cachefname)
-            else:
-                print 'wtf? cache file %s doesn\'t exist' % cachefname
-            if statuses[-1] == 'running':
-                return False
+        elif status == 'unknown':
+            cachefname = cachedir + '/%s-%s-status.html' % (mstr, datetime.datetime.now().__str__().replace(' ', '_'))
+            print '  unknown status for %s, writing html to %s' % (mstr, cachefname)
+            status = get_status(mstr, cachefname=cachefname, debug=debug)
+            return False
+
+        statuses.append(status)
+
     if statuses.count('complete') != len(statuses):
         print 'wtf? fell through, but not all statuses are \'complete\': %s' % statuses
         return False
+
     return True
 
 # ----------------------------------------------------------------------------------------
@@ -535,7 +578,7 @@ if args.test:
     args.no_push = True
 
 while True:
-    all_complete = check_all_models_complete()
+    all_complete = check_all_models_complete(debug=True)
     while not args.no_sleep and not all_complete:
         print '  %s: forecasts are running, sleep for %d min' % (datetime.datetime.now().strftime('%a %B %d %H:%M'), int(running_sleep_time / 60.))
         time.sleep(running_sleep_time)
