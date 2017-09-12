@@ -456,10 +456,14 @@ def get_run_status_times(td):
         raise Exception('unexpected status time \'%s\'' % status_time_list)
     hour, minute = [int(val) for val in status_time_list[0].split(':')]
     ampm = status_time_list[1]
-    if ampm == 'pm':
-        hour += 12
-    elif ampm != 'am':
+    if ampm not in  ['am', 'pm']:
         raise Exception('unexpected ampm \'%s\'' % ampm)
+    if hour == 12:
+        if ampm == 'am':  # not sure if they call 30min after midnight 12:30 or 00:30... but this should handle either
+            hour -= 12
+    else:
+        if ampm == 'pm':
+            hour += 12
     tzstr = status_time_list[2]
     if tzstr != 'PDT':
         raise Exception('unexpected time zone \'%s\'' % tzstr)
