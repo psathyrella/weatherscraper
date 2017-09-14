@@ -586,7 +586,7 @@ while True:
     while not args.no_sleep and not all_complete:
         print '  %s: forecasts are running, sleep for %d min' % (datetime.datetime.now().strftime('%a %B %d %H:%M'), int(running_sleep_time / 60.))
         time.sleep(running_sleep_time)
-        all_complete = check_all_models_complete()
+        all_complete = check_all_models_complete(debug=True)
 
     run()
 
