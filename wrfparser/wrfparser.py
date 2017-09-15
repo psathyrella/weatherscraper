@@ -141,10 +141,10 @@ variable_codes = {
 expected_hours = {
     '12km' : {
         '24-hour-precip' : [h for h in range(24, 180, 12)],
-        '3-hour-precip' : [h for h in range(6, 84, 3) if h != 3],
+        '3-hour-precip' : [h for h in range(6, 183, 3) if h != 3],
         'surface-temp' : [h for h in range(24, 180, 12)],
         '10m-wind-speed' : [h for h in range(24, 180, 12)],
-        'integrated-cloud' : [h for h in range(6, 84, 3) if h != 3],
+        'integrated-cloud' : [h for h in range(6, 183, 3) if h != 3],
     },
     '4km' : {
         '3-hour-precip' : [h for h in range(6, 84, 3) if h != 3],
