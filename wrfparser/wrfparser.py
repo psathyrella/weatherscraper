@@ -465,7 +465,7 @@ def get_run_status_times(td):
         if ampm == 'pm':
             hour += 12
     tzstr = status_time_list[2]
-    if tzstr != 'PDT':
+    if tzstr not in ['PDT', 'PST']:
         raise Exception('unexpected time zone \'%s\'' % tzstr)
     month_str = status_time_list[3]
     month = int(list(calendar.month_abbr).index(month_str))
