@@ -1,9 +1,6 @@
 domain,maptype,variable
-# 12km,washington,surface-temp
-# 12km,washington,24-hour-precip
 12km,12km-domain,3-hour-precip
 12km,12km-domain,integrated-cloud
-# 12km,washington,10m-wind-speed  # d.n.e.
 4km,washington,3-hour-precip
 4km,pacific-northwest,integrated-cloud
 4km,washington,surface-temp
@@ -11,5 +8,5 @@ domain,maptype,variable
 1.33km,western-washington,3-hour-precip
 1.33km,western-washington,surface-temp
 1.33km,western-washington,10m-wind-speed
+1.33km,western-washington,model-snow
 1.33km,washington-plus,integrated-cloud
-# 4km,4km-domain,3-hour-precip

@@ -23,6 +23,7 @@ model_strings = ['WRF-GFS'] #, 'Extended WRF-GFS']
 
 titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
+    'model-snow' : 'model snowfall in previous 3 hours',
     '24-hour-precip' : 'precip in previous 24 hours',
     'surface-temp' : 'surface temperature',
     '10m-wind-speed' : '10m wind speed',
@@ -80,21 +81,23 @@ def get_margins(maptype):
     return margins
     
 paste_sizes = {  # final/total image sizes
-    'washington-plus' : (160, 330),
+    'washington-plus' : (280, 604), #(160, 330),
     'pacific-northwest' : (180, 260),
     'washington' : (175, 460),
     'western-washington' : (280, 604),
     '12km-domain' : (300, 350),
 }
 rescale_pixels = {
-    'full-date' : (150, 20),
+    'full-date' : (300, 40),
+    'howe-to-chehalis' : (250, None),
+    'western-wa-sw-bc' : (250, None),
 }
 
 paste_positions = {  # (x, y) coords of upper left corner
     'washington-plus' : {
         'full-date' : (0, 0),
-        'howe-to-chehalis' : (0, 25),
-        'western-wa-sw-bc' : (0, 80),
+        'howe-to-chehalis' : (0, 50),
+        'western-wa-sw-bc' : (0, 160),
     },
     'pacific-northwest' : {
         'date' : (0, 0),
@@ -133,6 +136,7 @@ maptype_codes = {
 # http://www.atmos.washington.edu/wrfrt/rt/load.cgi?latest+YYYYMMDDHH/images_d2/pcp3.00.0000.gif
 variable_codes = {
     '3-hour-precip' : 'pcp3',
+    'model-snow' : 'msnow3',
     '24-hour-precip' : 'pcp24',
     'surface-temp' : 'tsfc',
     '10m-wind-speed' : 'wssfc2',
@@ -154,6 +158,7 @@ expected_hours = {
     },
     '1.33km' : {
         '3-hour-precip' : [h for h in range(6, 72, 3) if h != 3],
+        'model-snow' : [h for h in range(6, 72, 3) if h != 3],
         'surface-temp' : [h for h in range(6, 72, 3) if h != 3],
         '10m-wind-speed' : [h for h in range(6, 72, 3) if h != 3],
         'integrated-cloud' : [h for h in range(6, 72, 3) if h != 3],
@@ -180,7 +185,12 @@ def get_subimage(img, rname, margins):
     bbox = (tmpco['left'], tmpco['top'], width - tmpco['right'], height - tmpco['bottom'])
     subimg = img.crop(bbox)
     if rname in rescale_pixels:  # doesn't work for shit (well, it's too few pixels so it's hard to read the date)
-        subimg = subimg.resize(rescale_pixels[rname]) #, resample=Image.LANCZOS)
+        scale_pair = list(rescale_pixels[rname])
+        assert scale_pair[0] is not None  # easy to implement, but I don't need it right now
+        if scale_pair[1] is None:
+            scale_pair[1] = int(subimg.size[1] * float(scale_pair[0]) / subimg.size[0])
+            # assert float(scale_pair[0]) / subimg.size[0] == float(scale_pair[1]) / subimg.size[1]
+        subimg = subimg.resize(scale_pair) #, resample=Image.LANCZOS)
     return subimg
 
 # ----------------------------------------------------------------------------------------
@@ -191,6 +201,8 @@ def get_url(domain, maptype, variable, hour):
 def get_legend_fname(maptype, variable):
     if 'precip' in variable:
         variable_category = 'precip'
+    elif 'snow' in variable:
+        variable_category = 'snow'
     elif 'temp' in variable:
         variable_category = 'temp'
     elif 'wind' in variable:
@@ -277,7 +289,7 @@ def get_single_date(img):
             # new version for init time:
             datelist = datestr.translate(None, '_\'\"();:{}').split()
             if 'UTC' not in datelist:
-                print '  \'UTC\' not found in %s' % datestr
+                print '  \'UTC\' not found in \'%s\'' % datestr
                 return None
             utc_str_index = datelist.index('UTC')  # index of the string \'UTC\'
             datelist = datelist[utc_str_index - 1 : ]  # i.e. trim off the 'Init:'
