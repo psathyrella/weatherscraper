@@ -17,8 +17,11 @@ import argparse
 import colored_traceback.always
 from dateutil import tz
 import tempfile
+from collections import OrderedDict
 
 front_page_url = 'https://atmos.washington.edu/wrfrt/data/run_status.html'
+wrfdir = os.path.dirname(os.path.realpath(__file__))
+dummy_image_path = wrfdir + '/woot.png'
 model_strings = ['WRF-GFS'] #, 'Extended WRF-GFS']
 
 titles = {
@@ -170,6 +173,7 @@ final_image_params = {
     'columns' : 10
 }
 
+# grey: #656363
 htmlheader = """<!DOCTYPE html>
 <html>
 <body style="background-color:black;">
@@ -177,6 +181,12 @@ htmlheader = """<!DOCTYPE html>
 htmlfooter = """</body>
 </html>
 """
+ordered_domains = ['1.33km', '4km', '12km']  # way eaiser than sorting them afterward
+header_links = [
+    ['windguru', 'https://www.windguru.cz'],
+    ['spotwx', 'https://spotwx.com/'],
+    ['meteoblue', 'https://www.meteoblue.com/en/weather/forecast/multimodel/'],
+]
 
 # ----------------------------------------------------------------------------------------
 def get_subimage(img, rname, margins):
@@ -338,7 +348,11 @@ def get_fcast_image_info(domain, maptype, variable, hour):
         download_image(domain, maptype, variable, hour)
     margins = get_margins(maptype)
     if os.path.exists(fname):
-        img = Image.open(fname)
+        try:
+            img = Image.open(fname)  # model snow is giving me invalid gifs... then again it's late july, so maybe that's on purpose
+        except IOError as e:
+            print '    %s' % e
+            img = Image.open(dummy_image_path)
         subimages = {sname : get_subimage(img, sname, margins) for sname in margins}
         final_image = join_image_pieces(subimages, maptype)
     else:
@@ -381,27 +395,77 @@ def reverse_htmlfname(fname):
     return os.path.basename(fname).replace('.html', '').split('_')
 
 # ----------------------------------------------------------------------------------------
-def get_links(all_fnames):
+def link_str(name, url):
+    return '<a  href="%s"><font color=#4b92e7 size=3>%s</font></a>' % (url, name)
+
+# ----------------------------------------------------------------------------------------
+def get_link_lines(all_fnames):
     fnames = sorted(all_fnames)
-    links = []
-    last_domain = None
+    lines = []
+
+    # first add external links
+    lines += ['<font color=white size=3>%s</font>' % 'other models: ']
+    for name, url in header_links:
+        # lines.append('<a href="' + url + '"><font size=3>' + name + '</font></a>')
+        lines.append(link_str(name, url))
+    lines.append('<br>\n')
+    lines += ['<font color=white size=3>%s</font>' % 'wrf source: ']
+    # lines += ['<a  href="%s"><font color=#4b92e7 size=3>%s</font></a>' % ('https://atmos.washington.edu/wrfrt/gfsinit.html', 'atmos.washington.edu')]
+    lines += [link_str('atmos.washington.edu', 'https://atmos.washington.edu/wrfrt/gfsinit.html')]
+
+    # then add links to each set of uw wrf plots that we made
+# ----------------------------------------------------------------------------------------
+# TODO clean this up! looks like I left it in a sorry state but can't be bothered now since I want to commit for something else
+    info = OrderedDict()
     for fname in fnames:
-        domain, variable = reverse_htmlfname(fname)
-        linkstr = '<a href="' + fname + '"><font size=3>' + variable.replace('-', ' ') + '</font></a>'
-        if last_domain is None or domain != last_domain:
-            linkstr = '<font color=white>' + domain + ': </font>' + linkstr
-        if last_domain is not None and domain != last_domain:
-            linkstr = '<br>\n' + linkstr
-        links.append(linkstr)
-        last_domain = domain
-    return links
+        domain, var = reverse_htmlfname(fname)
+        if domain not in info:
+            info[domain] = OrderedDict()
+        if var not in info[domain]:
+            info[domain][var] = fname
+
+    all_vars = sorted(set([v for d in info for v in info[d]]))
+    # all_domains = ['%fkm' % dstr for dstr in sorted([float(d.rstrip('km')) for d in info])]  # sort the domains by increasing domain size
+    lines += ['<table style="width:75%">']
+    lines += ['<tr>']
+    lines += ['<th></th>']  # blank one for domain names
+    lines += ['<th><font color=white size=3>%s</font></th>' % v.replace('-', ' ') for v in all_vars]
+    lines += ['</tr>']
+     # {text-align:center}
+    for domain in [d for d in ordered_domains if d in info]:
+        lines += ['<tr>']
+        lines += ['<td><font color=white size=3>%s</font></td>' % domain]
+        for var in all_vars:
+            if var in info[domain]:
+                # lines += ['<td><a href="%s"><font color=#4b92e7 size=3>%s</font></a></td>' % (info[domain][var], domain)]
+                lines += ['<td>%s</a></td>' % link_str(domain, info[domain][var])]
+            else:
+                lines += ['<td></td>']
+        lines += ['</tr>']
+    lines += ['</table>']
+# ----------------------------------------------------------------------------------------
+    # linkstr = '<a href="' + fname + '"><font size=3>' + variable.replace('-', ' ') + '</font></a>'
+    # all_domains, all_vars = [sorted(list(set(thislist))) for thislist in zip(*[reverse_htmlfname(fname) for fname in fnames])]
+
+    # last_domain = None
+    # for fname in fnames:
+    #     domain, variable = reverse_htmlfname(fname)
+    #     linkstr = '<a href="' + fname + '"><font size=3>' + variable.replace('-', ' ') + '</font></a>'
+    #     if last_domain is None or domain != last_domain:
+    #         linkstr = '<font color=white>' + domain + ': </font>' + linkstr
+    #     if last_domain is not None and domain != last_domain:
+    #         linkstr = '<br>\n' + linkstr
+    #     lines.append(linkstr)
+    #     last_domain = domain
+
+    return lines
 
 # ----------------------------------------------------------------------------------------
 def write_index_html(fname, all_fnames):
     with open(fname, 'w') as htmlfile:
         htmlfile.write(htmlheader)
-        for link in get_links(all_fnames):
-            htmlfile.write(link + '\n')
+        for line in get_link_lines(all_fnames):
+            htmlfile.write(line + '\n')
         htmlfile.write(htmlfooter)
 
 # ----------------------------------------------------------------------------------------
@@ -410,9 +474,9 @@ def add_linkstrs(fname, all_fnames):
         lines = htmlfile.readlines()
     with open(args.outdir + '/' + fname, 'w') as htmlfile:
         for line in lines:
-            if '<body' in line:
+            if '<body' in line:  # look for <htmlheader>
                 # htmlfile.write('<center>\n')
-                for link in get_links(all_fnames):
+                for link in get_link_lines(all_fnames):
                     htmlfile.write(link + '\n')
                 # htmlfile.write('</center>\n')
                 htmlfile.write('<br>\n<br>\n')
@@ -496,7 +560,11 @@ def get_status(modeltype, cachefname=None, debug=False):
     with tempfile.NamedTemporaryFile() as tmpfile:
         if debug:
             print '    retrieving %s' % front_page_url
-        urllib.urlretrieve(front_page_url, tmpfile.name)
+        try:
+            urllib.urlretrieve(front_page_url, tmpfile.name)
+        except IOError as e:
+            print '    %s' % e
+            return 'unknown'
         tree = etree.parse(tmpfile, parser)
     if cachefname is not None:  # write html to a file in case we want it later
         if debug:
@@ -576,7 +644,6 @@ def run():
     write_index_html(args.outdir + '/index.html', htmlfnames)
 
 # ----------------------------------------------------------------------------------------
-wrfdir = os.path.dirname(os.path.realpath(__file__))
 parser = argparse.ArgumentParser()
 parser.add_argument('--outdir', required=True)
 parser.add_argument('--config-fname', default=wrfdir + '/config.csv')
