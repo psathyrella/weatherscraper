@@ -15,6 +15,7 @@ import calendar
 import pytesseract  # have to do both: pip --user pytesseract and sudo apt-get install tesseract-ocr
 import argparse
 import colored_traceback.always
+import traceback
 from dateutil import tz
 import tempfile
 from collections import OrderedDict
@@ -667,7 +668,14 @@ while True:
         time.sleep(running_sleep_time)
         all_complete = check_all_models_complete(debug=True)
 
-    run()
+    try:
+        run()
+    except:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
+        print ''.join(lines)
+        print '      failed to run (see above), continuing'
+        continue
 
     if not args.no_push:
         check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])
