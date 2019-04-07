@@ -410,9 +410,17 @@ def get_link_lines(all_fnames):
         # lines.append('<a href="' + url + '"><font size=3>' + name + '</font></a>')
         lines.append(link_str(name, url))
     lines.append('<br>\n')
+
     lines += ['<font color=white size=3>%s</font>' % 'wrf source: ']
     # lines += ['<a  href="%s"><font color=#4b92e7 size=3>%s</font></a>' % ('https://atmos.washington.edu/wrfrt/gfsinit.html', 'atmos.washington.edu')]
     lines += [link_str('atmos.washington.edu', 'https://atmos.washington.edu/wrfrt/gfsinit.html')]
+    lines.append('<br>\n')
+
+    lines += ['<font color=white size=3>%s</font>' % 'seattle monthly averages: ']
+    lines += [link_str('rainfall', 'images/average-monthly-rainfall.png')]
+    lines += [link_str('chance of precip', 'daily-precip-chance.png')]
+    lines.append('<br>\n')
+    lines.append('<br>\n')
 
     # then add links to each set of uw wrf plots that we made
 # ----------------------------------------------------------------------------------------
