@@ -34,12 +34,19 @@ titles = {
     'integrated-cloud' : 'column-integrated cloud water'
 }
 
+# ----------------------------------------------------------------------------------------
 expected_date_format = ('hours', 'tz', 'weekday', 'monthday', 'month', 'year')
+# ----------------------------------------------------------------------------------------
 def convert_dateinfo(dateinfo):
     for key in ('hours', 'monthday', 'year'):  # all the integers
         dateinfo[key] = dateinfo[key].replace('O', '0').replace('l', '1')
         dateinfo[key] = int(dateinfo[key])
     dateinfo['year'] += 2000
+# ----------------------------------------------------------------------------------------
+def get_imonth(dateinfo):
+    if dateinfo['month'] not in calendar.month_abbr:
+        dateinfo['month'] = dateinfo['month'].replace('n]', 'y').replace('V', 'y')
+    return list(calendar.month_abbr).index(dateinfo['month'])
 
 typical_hours_between_init_and_zero_fcast_hour = 4
 side_indices = {'left' : 0, 'right' : 1, 'top' : 2, 'bottom' : 3}
@@ -308,7 +315,7 @@ def get_single_date(img):
             for ifmt in range(len(expected_date_format)):
                 dateinfo[expected_date_format[ifmt]] = datelist[ifmt]
             convert_dateinfo(dateinfo)
-            imonth = list(calendar.month_abbr).index(dateinfo['month'])
+            imonth = get_imonth(dateinfo)
             utc_init_time = datetime.datetime(dateinfo['year'], imonth, dateinfo['monthday'], dateinfo['hours'])
             utc_init_time = utc_init_time.replace(tzinfo=tz.gettz('UTC'))  # tell the datetime object that it's in UTC time zone since datetime objects are 'naive' by default
             pdt_init_time = utc_init_time.astimezone(tz.gettz('PDT'))
