@@ -26,15 +26,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.9899495"
-     inkscape:cx="316.66221"
-     inkscape:cy="418.32474"
+     inkscape:cx="187.86776"
+     inkscape:cy="297.10644"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1918"
-     inkscape:window-height="1042"
-     inkscape:window-x="0"
-     inkscape:window-y="37"
+     inkscape:window-width="1345"
+     inkscape:window-height="867"
+     inkscape:window-x="101"
+     inkscape:window-y="597"
      inkscape:window-maximized="0"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -279,6 +279,23 @@
          x="435.03055"
          y="339.65887"
          style="font-weight:bold;font-size:22px;-inkscape-font-specification:'Sans Bold';fill:#ff0000;stroke:#2b0000"
-         id="tspan3417">l. tahoma</tspan></text>
+         id="tspan3417">l. tahoma</tspan><tspan
+         sodipodi:role="line"
+         x="435.03055"
+         y="367.15887"
+         style="font-weight:bold;font-size:22px;-inkscape-font-specification:'Sans Bold';fill:#ff0000;stroke:#2b0000"
+         id="tspan5330">m. strobach</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:bold;font-size:40px;line-height:0%;font-family:Sans;-inkscape-font-specification:'Sans Bold';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:#2b0000"
+       x="221.23862"
+       y="736.42303"
+       id="text5326"
+       sodipodi:linespacing="0%"><tspan
+         sodipodi:role="line"
+         id="tspan5328"
+         x="221.23862"
+         y="736.42303"
+         style="font-size:22px;line-height:0%;stroke:#2b0000">m</tspan></text>
   </g>
 </svg>
