@@ -11,7 +11,7 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    width="763.76923"
-   height="578.07111"
+   height="608.90875"
    id="svg3017"
    version="1.1"
    inkscape:version="0.91 r13725"
@@ -27,14 +27,14 @@
      inkscape:pageshadow="2"
      inkscape:zoom="0.9899495"
      inkscape:cx="215.72245"
-     inkscape:cy="275.08834"
+     inkscape:cy="305.92601"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1317"
-     inkscape:window-height="707"
-     inkscape:window-x="239"
-     inkscape:window-y="624"
+     inkscape:window-width="1206"
+     inkscape:window-height="760"
+     inkscape:window-x="98"
+     inkscape:window-y="231"
      inkscape:window-maximized="0"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -148,7 +148,7 @@
          style="font-weight:bold;font-size:22px;-inkscape-font-specification:'Sans Bold';fill:#ff0000;stroke:#2b0000">a. valemount</tspan><tspan
          sodipodi:role="line"
          x="520.37335"
-         y="128.48708"
+         y="128.48709"
          style="font-weight:bold;font-size:22px;-inkscape-font-specification:'Sans Bold';fill:#ff0000;stroke:#2b0000"
          id="tspan3417-3" /></text>
     <text
@@ -202,5 +202,29 @@
          y="211.34424"
          x="520.37335"
          sodipodi:role="line" /></text>
+    <text
+       sodipodi:linespacing="0%"
+       id="text4744"
+       y="608.90521"
+       x="179.80716"
+       style="font-style:normal;font-weight:bold;font-size:40px;line-height:0%;font-family:Sans;-inkscape-font-specification:'Sans Bold';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:#2b0000"
+       xml:space="preserve"><tspan
+         style="font-size:22px;line-height:0%;stroke:#2b0000"
+         y="608.90521"
+         x="179.80716"
+         id="tspan4746"
+         sodipodi:role="line">e</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:40px;line-height:125%;font-family:Sans;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:#2b0000"
+       x="520.37335"
+       y="211.84424"
+       id="text4748"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="520.37335"
+         y="211.84424"
+         style="font-weight:bold;font-size:22px;-inkscape-font-specification:'Sans Bold';fill:#ff0000;stroke:#2b0000"
+         id="tspan4752">e. trout creek</tspan></text>
   </g>
 </svg>
