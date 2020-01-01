@@ -27,6 +27,7 @@ model_strings = ['WRF-GFS'] #, 'Extended WRF-GFS']
 
 titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
+    'snow' : 'snowfall in previous 3 hours',
     'model-snow' : 'model snowfall in previous 3 hours',
     '24-hour-precip' : 'precip in previous 24 hours',
     'surface-temp' : 'surface temperature',
@@ -71,7 +72,7 @@ specific_margins = {  # (left, right, top, bottom)
     'washington' : {
         'date' : (653, 123, 21, 855),
         'full-date' : (643, 5, 21, 855),
-        'howe-to-chehalis' : (175, 550, 175, 650),
+        'howe-to-chehalis' : (175, 475, 175, 650),
         'cascades' : (310, 415, 250, 300)
     },
     'western-washington' : {
@@ -148,6 +149,7 @@ maptype_codes = {
 variable_codes = {
     '3-hour-precip' : 'pcp3',
     'model-snow' : 'msnow3',
+    'snow' : 'snow3',  # i don't know the difference between 'model snow' and 'snow', but i really wish i did [using snow for 4km, since it doesn't have 3hr model snow)
     '24-hour-precip' : 'pcp24',
     'surface-temp' : 'tsfc',
     '10m-wind-speed' : 'wssfc2',
@@ -160,12 +162,14 @@ expected_hours = {
         'surface-temp' : [h for h in range(24, 180, 12)],
         '10m-wind-speed' : [h for h in range(24, 180, 12)],
         'integrated-cloud' : [h for h in range(6, 183, 3) if h != 3],
+        'model-snow' : [h for h in range(6, 183, 3) if h != 3],
     },
     '4km' : {
         '3-hour-precip' : [h for h in range(6, 84, 3) if h != 3],
         'surface-temp' : [h for h in range(6, 84, 3) if h != 3],
         '10m-wind-speed' : [h for h in range(6, 84, 3) if h != 3],
         'integrated-cloud' : [h for h in range(6, 84, 3) if h != 3],
+        'snow' : [h for h in range(6, 84, 3) if h != 3],
     },
     '1.33km' : {
         '3-hour-precip' : [h for h in range(6, 72, 3) if h != 3],
@@ -690,7 +694,10 @@ while True:
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
         print ''.join(lines)
         print '      failed to run (see above), continuing'
-        continue
+        if args.test or args.no_sleep:
+            break
+        else:
+            continue
 
     if not args.no_push:
         check_call([wrfdir + '/upload.sh', args.outdir.replace('/wrfparser', '')])

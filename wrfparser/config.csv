@@ -1,7 +1,9 @@
 domain,maptype,variable
 12km,12km-domain,3-hour-precip
+12km,12km-domain,model-snow
 12km,12km-domain,integrated-cloud
 4km,washington,3-hour-precip
+4km,washington,snow
 4km,pacific-northwest,integrated-cloud
 4km,washington,surface-temp
 4km,washington,10m-wind-speed
