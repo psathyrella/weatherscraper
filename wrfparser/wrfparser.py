@@ -155,28 +155,34 @@ variable_codes = {
     '10m-wind-speed' : 'wssfc2',
     'integrated-cloud' : 'intcld'
 }
+exp_hour_values = {  # these all start at 6 because there never seems to be a 3, and 0 seems to be broken (or at least the precip ones always have zero precipe)
+    '84-every-3' : list(range(6, 84+1, 3)),
+    '72-every-3' : list(range(6, 72+1, 3)),
+    '180-every-3' : list(range(6, 180+1, 3)),
+    '180-every-12' : list(range(24, 180+1, 12)),
+}
 expected_hours = {
     '12km' : {
-        '24-hour-precip' : [h for h in range(24, 180, 12)],
-        '3-hour-precip' : [h for h in range(6, 183, 3) if h != 3],  # not sure why these all start at 6, but I think there was a reason
-        'surface-temp' : [h for h in range(24, 180, 12)],
-        '10m-wind-speed' : [h for h in range(24, 180, 12)],
-        'integrated-cloud' : [h for h in range(6, 183, 3) if h != 3],
-        'model-snow' : [h for h in range(6, 183, 3) if h != 3],
+        '24-hour-precip' : exp_hour_values['180-every-12'],
+        '3-hour-precip' : exp_hour_values['180-every-3'],
+        'surface-temp' : exp_hour_values['180-every-12'],
+        '10m-wind-speed' : exp_hour_values['180-every-12'],
+        'integrated-cloud' : exp_hour_values['180-every-3'],
+        'model-snow' : exp_hour_values['180-every-3'],
     },
     '4km' : {
-        '3-hour-precip' : [h for h in range(6, 84, 3) if h != 3],
-        'surface-temp' : [h for h in range(6, 84, 3) if h != 3],
-        '10m-wind-speed' : [h for h in range(6, 84, 3) if h != 3],
-        'integrated-cloud' : [h for h in range(6, 84, 3) if h != 3],
-        'snow' : [h for h in range(6, 84, 3) if h != 3],
+        '3-hour-precip' : exp_hour_values['84-every-3'],
+        'surface-temp' : exp_hour_values['84-every-3'],
+        '10m-wind-speed' : exp_hour_values['84-every-3'],
+        'integrated-cloud' : exp_hour_values['84-every-3'],
+        'snow' : exp_hour_values['84-every-3'],
     },
     '1.33km' : {
-        '3-hour-precip' : [h for h in range(6, 72, 3) if h != 3],
-        'model-snow' : [h for h in range(6, 72, 3) if h != 3],
-        'surface-temp' : [h for h in range(6, 72, 3) if h != 3],
-        '10m-wind-speed' : [h for h in range(6, 72, 3) if h != 3],
-        'integrated-cloud' : [h for h in range(6, 72, 3) if h != 3],
+        '3-hour-precip' : exp_hour_values['72-every-3'],
+        'model-snow' : exp_hour_values['72-every-3'],
+        'surface-temp' : exp_hour_values['72-every-3'],
+        '10m-wind-speed' : exp_hour_values['72-every-3'],
+        'integrated-cloud' : exp_hour_values['72-every-3'],
     }
 }
 
