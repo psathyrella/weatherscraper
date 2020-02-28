@@ -7,6 +7,7 @@ if [ "$repodir" == "" ] || ! [ -d $repodir ]; then
 fi
 
 echo "  pull/add/commit/push in $repodir"
+# TODO need to add the branch orphaning or whatever to this so it happens automatically every 100 commits or whatever (currently the .git dir just gets bigger and bigger, and is like 70GB after a year)
 cd $repodir
 git pull --quiet origin master
 git add --all wrfparser/

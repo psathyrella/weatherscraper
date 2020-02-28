@@ -7,7 +7,7 @@
 
 # remove history to save disk space
 cd psathyrella.github.io
-git checkout --orphan newBranch
+git checkout --orphan tmp-branch
 git add --all wrfparser/  # Add all files and commit them
 git commit
 git branch -D master  # Deletes the master branch
