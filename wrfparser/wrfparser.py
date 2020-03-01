@@ -29,11 +29,24 @@ titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
     'snow' : 'snowfall in previous 3 hours',
     'model-snow' : 'model snowfall in previous 3 hours',
+    'snow-and-precip' : 'snowfall+precip in previous 3 hours',
     '24-hour-precip' : 'precip in previous 24 hours',
     'surface-temp' : 'surface temperature',
     '10m-wind-speed' : '10m wind speed',
     'integrated-cloud' : 'column-integrated cloud water'
 }
+# def get_short_name(name):
+#     if 'snow' in name:
+#         return 'snow'
+#     else:
+#         return name.replace('-', ' ')
+# def short_name_list(names):  # kind of hackey: returns short name for each name in <names>, except skipping any that are already there (just weirdness to allow all three of the different snow variables to show up in the same column in the link table)
+#     short_names = []
+#     for name in names:
+#         sname = get_short_name(name)
+#         if sname not in short_names:
+#             short_names.append(sname)
+#     return short_names
 
 # ----------------------------------------------------------------------------------------
 expected_date_format = ('hours', 'tz', 'weekday', 'monthday', 'month', 'year')
@@ -150,6 +163,7 @@ variable_codes = {
     '3-hour-precip' : 'pcp3',
     'model-snow' : 'msnow3',
     'snow' : 'snow3',  # i don't know the difference between 'model snow' and 'snow', but i really wish i did [using snow for 4km, since it doesn't have 3hr model snow)
+    'snow-and-precip' : 'rsnow3',
     '24-hour-precip' : 'pcp24',
     'surface-temp' : 'tsfc',
     '10m-wind-speed' : 'wssfc2',
@@ -172,6 +186,7 @@ expected_hours = {
     },
     '4km' : {
         '3-hour-precip' : exp_hour_values['84-every-3'],
+        'snow-and-precip' : exp_hour_values['84-every-3'],
         'surface-temp' : exp_hour_values['84-every-3'],
         '10m-wind-speed' : exp_hour_values['84-every-3'],
         'integrated-cloud' : exp_hour_values['84-every-3'],
@@ -180,6 +195,7 @@ expected_hours = {
     '1.33km' : {
         '3-hour-precip' : exp_hour_values['72-every-3'],
         'model-snow' : exp_hour_values['72-every-3'],
+        'snow-and-precip' : exp_hour_values['72-every-3'],
         'surface-temp' : exp_hour_values['72-every-3'],
         '10m-wind-speed' : exp_hour_values['72-every-3'],
         'integrated-cloud' : exp_hour_values['72-every-3'],
@@ -227,7 +243,7 @@ def get_url(domain, maptype, variable, hour):
 
 # ----------------------------------------------------------------------------------------
 def get_legend_fname(maptype, variable):
-    if 'precip' in variable:
+    if 'precip' in variable:  # this now also picks up 'snow-and-precip'
         variable_category = 'precip'
     elif 'snow' in variable:
         variable_category = 'snow'
@@ -456,6 +472,7 @@ def get_link_lines(all_fnames):
     lines += ['<tr>']
     lines += ['<th></th>']  # blank one for domain names
     lines += ['<th><font color=white size=3>%s</font></th>' % v.replace('-', ' ') for v in all_vars]
+    # lines += ['<th><font color=white size=3>%s</font></th>' % sv for sv in short_name_list(all_vars)]
     lines += ['</tr>']
      # {text-align:center}
     for domain in [d for d in ordered_domains if d in info]:
