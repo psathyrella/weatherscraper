@@ -19,6 +19,7 @@ import traceback
 from dateutil import tz
 import tempfile
 from collections import OrderedDict
+import traceback
 
 front_page_url = 'https://atmos.washington.edu/wrfrt/data/run_status.html'
 wrfdir = os.path.dirname(os.path.realpath(__file__))
@@ -324,6 +325,8 @@ def get_single_date(img):
         # img.save(os.getenv('www') + '/tmp/tmp.png')
         # sys.exit()
     except:
+        elines = traceback.format_exception(*sys.exc_info())
+        print ''.join(elines)
         print '  failed running tesseract'
         return None
     else:
