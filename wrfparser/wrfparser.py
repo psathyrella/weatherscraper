@@ -54,7 +54,7 @@ expected_date_format = ('hours', 'tz', 'weekday', 'monthday', 'month', 'year')
 # ----------------------------------------------------------------------------------------
 def convert_dateinfo(dateinfo):
     for key in ('hours', 'monthday', 'year'):  # all the integers
-        dateinfo[key] = dateinfo[key].replace('O', '0').replace('l', '1')
+        dateinfo[key] = dateinfo[key].replace('O', '0').replace('l', '1').replace('i', '1')
         dateinfo[key] = int(dateinfo[key])
     dateinfo['year'] += 2000
 # ----------------------------------------------------------------------------------------
@@ -319,7 +319,7 @@ def join_image_pieces(subimages, maptype):
 #     return return_str
 
 # ----------------------------------------------------------------------------------------
-def get_single_date(img):
+def get_single_date(img, fname):
     try:
         datestr = str(pytesseract.image_to_string(img))
         # img.save(os.getenv('www') + '/tmp/tmp.png')
@@ -349,7 +349,7 @@ def get_single_date(img):
             utc_init_time = utc_init_time.replace(tzinfo=tz.gettz('UTC'))  # tell the datetime object that it's in UTC time zone since datetime objects are 'naive' by default
             pdt_init_time = utc_init_time.astimezone(tz.gettz('PDT'))
         except Exception, e:
-            print '  couldn\'t convert tesseract output string \'%s\'' % datestr
+            print '  couldn\'t convert tesseract output string \'%s\' from %s' % (datestr, fname)
             print e
             return None
     return pdt_init_time
@@ -360,7 +360,7 @@ def set_dates(imgfo):
     init_time = None
     for iimg in range(len(imgfo)):
         if init_time is None:
-            init_time = get_single_date(imgfo[iimg]['subimages']['init-time'])
+            init_time = get_single_date(imgfo[iimg]['subimages']['init-time'], imgfo[iimg]['fname'])
             break
     if init_time is None:  # couldn't get it from any of the images
         init_time = datetime.datetime.now() - datetime.timedelta(hours=typical_hours_between_init_and_zero_fcast_hour)
