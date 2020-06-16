@@ -26,15 +26,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.9899495"
-     inkscape:cx="187.86776"
-     inkscape:cy="297.10644"
+     inkscape:cx="451.73268"
+     inkscape:cy="316.2024"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1345"
-     inkscape:window-height="867"
-     inkscape:window-x="101"
-     inkscape:window-y="597"
+     inkscape:window-width="1454"
+     inkscape:window-height="905"
+     inkscape:window-x="343"
+     inkscape:window-y="364"
      inkscape:window-maximized="0"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -284,18 +284,35 @@
          x="435.03055"
          y="367.15887"
          style="font-weight:bold;font-size:22px;-inkscape-font-specification:'Sans Bold';fill:#ff0000;stroke:#2b0000"
-         id="tspan5330">m. strobach</tspan></text>
+         id="tspan5330">m. strobach</tspan><tspan
+         sodipodi:role="line"
+         x="435.03055"
+         y="394.65887"
+         style="font-weight:bold;font-size:22px;-inkscape-font-specification:'Sans Bold';fill:#ff0000;stroke:#2b0000"
+         id="tspan4174">o. tieton (bend)</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:bold;font-size:40px;line-height:0%;font-family:Sans;-inkscape-font-specification:'Sans Bold';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:#2b0000"
-       x="221.23862"
-       y="736.42303"
+       x="225.27922"
+       y="733.39258"
        id="text5326"
        sodipodi:linespacing="0%"><tspan
          sodipodi:role="line"
          id="tspan5328"
-         x="221.23862"
-         y="736.42303"
+         x="225.27922"
+         y="733.39258"
          style="font-size:22px;line-height:0%;stroke:#2b0000">m</tspan></text>
+    <text
+       sodipodi:linespacing="0%"
+       id="text4176"
+       y="712.17938"
+       x="244.47212"
+       style="font-style:normal;font-weight:bold;font-size:40px;line-height:0%;font-family:Sans;-inkscape-font-specification:'Sans Bold';letter-spacing:0px;word-spacing:0px;fill:#ff0000;fill-opacity:1;stroke:#2b0000"
+       xml:space="preserve"><tspan
+         style="font-size:22px;line-height:0%;stroke:#2b0000"
+         y="712.17938"
+         x="244.47212"
+         id="tspan4178"
+         sodipodi:role="line">o</tspan></text>
   </g>
 </svg>

@@ -92,7 +92,7 @@ specific_margins = {  # (left, right, top, bottom)
     'western-washington' : {
         'date' : (630, 123, 21, 855),
         'full-date' : (630, 5, 21, 855),
-        'cascades' : (550, 70, 120, 200)
+        'cascades' : (550, 70, 120, 100)
     },
     '12km-domain' : {
         'date' : (630, 123, 21, 855),
@@ -106,11 +106,11 @@ def get_margins(maptype):
     margins.update(specific_margins[maptype])
     return margins
     
-paste_sizes = {  # final/total image sizes
+paste_sizes = {  # final/total image sizes # (width, height) in pixels
     'washington-plus' : (280, 604), #(160, 330),
     'pacific-northwest' : (180, 260),
     'washington' : (175, 460),
-    'western-washington' : (280, 604),
+    'western-washington' : (280, 650),
     '12km-domain' : (300, 350),
 }
 rescale_pixels = {
