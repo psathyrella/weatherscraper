@@ -11,5 +11,5 @@ domain,maptype,variable
 1.33km,western-washington,3-hour-precip
 1.33km,western-washington,surface-temp
 1.33km,western-washington,10m-wind-speed
-# 1.33km,western-washington,model-snow
+1.33km,western-washington,model-snow
 1.33km,washington-plus,integrated-cloud
