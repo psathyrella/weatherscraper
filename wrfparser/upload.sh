@@ -10,6 +10,10 @@ echo "  pull/add/commit/push in $repodir"
 # TODO need to add the branch orphaning or whatever to this so it happens automatically every 100 commits or whatever (currently the .git dir just gets bigger and bigger, and is like 70GB after a year)
 cd $repodir
 git pull --quiet origin master
-git add --all wrfparser/
+git checkout --orphan tmp-branch
+git add --all wrfparser/  # Add all files and commit them
 git commit --quiet -m "forecasts pushed on `date`"
-git push --quiet origin master
+git branch -D master  # Deletes the master branch
+git branch -m master  # Rename the current branch to master
+git push --quiet -f origin master  # Force push master branch to github
+git gc --aggressive --prune=all     # remove the old files
