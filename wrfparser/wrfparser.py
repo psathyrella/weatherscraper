@@ -97,7 +97,7 @@ specific_margins = {  # (left, right, top, bottom)
     '12km-domain' : {
         'date' : (630, 123, 21, 855),
         'full-date' : (630, 5, 21, 855),
-        'wa-sw-bc' : (350, 200, 130, 450),
+        'wa-sw-bc' : (350, 200, 130, 350),
     },
 }
 # ----------------------------------------------------------------------------------------
@@ -111,7 +111,7 @@ paste_sizes = {  # final/total image sizes # (width, height) in pixels
     'pacific-northwest' : (180, 260),
     'washington' : (175, 460),
     'western-washington' : (280, 650),
-    '12km-domain' : (300, 350),
+    '12km-domain' : (300, 400),
 }
 rescale_pixels = {
     'full-date' : (300, 40),
