@@ -620,7 +620,14 @@ def get_status(modeltype, cachefname=None, debug=False):
             tmpfile.write(tmpstr)
 
     tdlist = list(tree.findall('.//td'))
-    run_time, status_time = get_run_status_times(tdlist[0])
+# ----------------------------------------------------------------------------------------
+# they changed the format, so hacking this on
+    assert len(tdlist) == 2
+    if tdlist[1].text in ['complete', 'running']:
+        return tdlist[1].text
+    return 'unknown'
+# ----------------------------------------------------------------------------------------
+    run_time, status_time = get_run_status_times(tdlist[1])
     if debug:
         print '       run time: %s ' % run_time
         print '    status time: %s ' % status_time
