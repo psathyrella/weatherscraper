@@ -625,6 +625,9 @@ def get_status(modeltype, cachefname=None, debug=False):
     assert len(tdlist) == 2
     if tdlist[1].text in ['complete', 'running']:
         return tdlist[1].text
+    elif 'to hour' in tdlist[1].text:
+        print '  status: %s' % tdlist[1].text
+        return 'running'
     return 'unknown'
 # ----------------------------------------------------------------------------------------
     run_time, status_time = get_run_status_times(tdlist[1])
