@@ -81,7 +81,7 @@ specific_margins = {  # (left, right, top, bottom)
     'pacific-northwest' : {
         'date' : (653, 123, 21, 855),
         'full-date' : (643, 5, 21, 855),
-        'western-wa-sw-bc' : (275, 450, 220, 420),
+        'western-wa-sw-bc' : (200, 475, 180, 350),
     },
     'washington' : {
         'date' : (653, 123, 21, 855),
@@ -108,7 +108,7 @@ def get_margins(maptype):
     
 paste_sizes = {  # final/total image sizes # (width, height) in pixels
     'washington-plus' : (280, 604), #(160, 330),
-    'pacific-northwest' : (180, 260),
+    'pacific-northwest' : (180, 325),
     'washington' : (175, 460),
     'western-washington' : (280, 650),
     '12km-domain' : (300, 400),
@@ -280,6 +280,7 @@ def get_fname(domain, maptype, variable, hour, processed=False):
 def download_image(domain, maptype, variable, hour):
     outfname = args.outdir + '/' + get_fname(domain, maptype, variable, hour)
     if args.no_download:
+        print '    --no-download: doing nothing'
         return
     if not os.path.exists(os.path.dirname(outfname)):
         os.makedirs(os.path.dirname(outfname))
