@@ -623,11 +623,13 @@ def get_status(modeltype, cachefname=None, debug=False):
 # ----------------------------------------------------------------------------------------
 # they changed the format, so hacking this on
     assert len(tdlist) == 2
-    if tdlist[1].text in ['complete', 'running']:
-        return tdlist[1].text
-    elif 'to hour' in tdlist[1].text:
-        print '  status: %s' % tdlist[1].text
+    st_text = tdlist[1].text
+    if st_text in ['complete', 'running']:
+        return st_text
+    elif 'to hour' in st_text or '1 1/3km to hr' in st_text:
+        print '  status: %s' % st_text
         return 'running'
+    print '  unknown status: \'%s\'' % st_text
     return 'unknown'
 # ----------------------------------------------------------------------------------------
     run_time, status_time = get_run_status_times(tdlist[1])
