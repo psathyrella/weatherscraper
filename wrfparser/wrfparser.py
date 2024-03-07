@@ -20,6 +20,9 @@ from dateutil import tz
 import tempfile
 from collections import OrderedDict
 import traceback
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 front_page_url = 'https://atmos.washington.edu/wrfrt/data/run_status.html'
 wrfdir = os.path.dirname(os.path.realpath(__file__))
