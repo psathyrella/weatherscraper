@@ -82,7 +82,7 @@ specific_margins = {  # (left, right, top, bottom)
         'western-wa-sw-bc' : (325, 430, 155, 500),
     },
     'pacific-northwest' : {
-        'date' : (653, 123, 21, 855),
+        'date' : (620, 110, 21, 855),
         'full-date' : (643, 5, 21, 855),
         'western-wa-sw-bc' : (200, 475, 180, 350),
     },
