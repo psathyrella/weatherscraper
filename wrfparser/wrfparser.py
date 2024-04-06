@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # helps a bit: convert tmp.png -morphology erode:1 square:1 m.png
 
 from PIL import Image  # install with pypi package 'pillow' (it's a PIL fork)
@@ -9,7 +9,7 @@ import sys
 import glob
 from subprocess import check_call, CalledProcessError
 from lxml import etree
-import urllib
+import urllib.request, urllib.parse, urllib.error
 import datetime
 import calendar
 import pytesseract  # have to do both: pip --user pytesseract and sudo apt-get install tesseract-ocr
@@ -228,7 +228,7 @@ header_links = [
 
 # ----------------------------------------------------------------------------------------
 def get_subimage(img, rname, margins):
-    tmpco = {side : margins[rname][iside] for side, iside in side_indices.items()}
+    tmpco = {side : margins[rname][iside] for side, iside in list(side_indices.items())}
     width, height = img.size
     bbox = (tmpco['left'], tmpco['top'], width - tmpco['right'], height - tmpco['bottom'])
     subimg = img.crop(bbox)
@@ -283,16 +283,16 @@ def get_fname(domain, maptype, variable, hour, processed=False):
 def download_image(domain, maptype, variable, hour):
     outfname = args.outdir + '/' + get_fname(domain, maptype, variable, hour)
     if args.no_download:
-        print '    --no-download: doing nothing'
+        print('    --no-download: doing nothing')
         return
     if not os.path.exists(os.path.dirname(outfname)):
         os.makedirs(os.path.dirname(outfname))
     url = get_url(domain, maptype, variable, hour)
     try:
-        urllib.urlretrieve(url, outfname)
+        urllib.request.urlretrieve(url, outfname)
         # check_call(['wget', '-O', outfname, url])
     except CalledProcessError:
-        print '  failed retrieving %s' % url
+        print('  failed retrieving %s' % url)
         os.remove(outfname)
 
 # ----------------------------------------------------------------------------------------
@@ -304,7 +304,7 @@ def download_all_images(domain, maptype, variable):
 def join_image_pieces(subimages, maptype):
     # joined_image = Image.new("RGB", (subimages['cascades'].size[0], subimages['cascades'].size[1] + subimages['date'].size[1]))
     joined_image = Image.new("RGB", paste_sizes[maptype])  # (width, height) in pixels
-    for name, ppos in paste_positions[maptype].items():
+    for name, ppos in list(paste_positions[maptype].items()):
         joined_image.paste(subimages[name], ppos)  # second arg is 2-tuple giving upper left corner (can also be a 4-tuple giving the (left, upper, right, lower) pixel coordinate (in latter case, size of pasted image must match)
     return joined_image
 
@@ -330,17 +330,17 @@ def get_single_date(img, fname):
         # sys.exit()
     except:
         elines = traceback.format_exception(*sys.exc_info())
-        print ''.join(elines)
-        print '  failed running tesseract'
+        print(''.join(elines))
+        print('  failed running tesseract')
         return None
     else:
         try:
             # old version for full non-init date line:
             # datelist = datestr[datestr.find('(') + 1 : datestr.find(')')].replace('\'', '').split()
             # new version for init time:
-            datelist = datestr.translate(None, '_\'\"();:{}').split()
+            datelist = datestr.translate(str.maketrans('', '', '_\'\"();:{}')).split()
             if 'UTC' not in datelist:
-                print '  \'UTC\' not found in \'%s\'' % datestr
+                print('  \'UTC\' not found in \'%s\'' % datestr)
                 return None
             utc_str_index = datelist.index('UTC')  # index of the string \'UTC\'
             datelist = datelist[utc_str_index - 1 : ]  # i.e. trim off the 'Init:'
@@ -352,9 +352,9 @@ def get_single_date(img, fname):
             utc_init_time = datetime.datetime(dateinfo['year'], imonth, dateinfo['monthday'], dateinfo['hours'])
             utc_init_time = utc_init_time.replace(tzinfo=tz.gettz('UTC'))  # tell the datetime object that it's in UTC time zone since datetime objects are 'naive' by default
             pdt_init_time = utc_init_time.astimezone(tz.gettz('PDT'))
-        except Exception, e:
-            print '  couldn\'t convert tesseract output string \'%s\' from %s' % (datestr, fname)
-            print e
+        except Exception as e:
+            print('  couldn\'t convert tesseract output string \'%s\' from %s' % (datestr, fname))
+            print(e)
             return None
     return pdt_init_time
 
@@ -385,14 +385,14 @@ def get_fcast_image_info(domain, maptype, variable, hour):
         pass
         # print '  already exists: %s' % fname
     else:
-        print '  downloading %s' % fname
+        print('  downloading %s' % fname)
         download_image(domain, maptype, variable, hour)
     margins = get_margins(maptype)
     if os.path.exists(fname):
         try:
             img = Image.open(fname)  # model snow is giving me invalid gifs... then again it's late july, so maybe that's on purpose
         except IOError as e:
-            print '    %s' % e
+            print('    %s' % e)
             img = Image.open(dummy_image_path)
         subimages = {sname : get_subimage(img, sname, margins) for sname in margins}
         final_image = join_image_pieces(subimages, maptype)
@@ -609,18 +609,18 @@ def get_status(modeltype, cachefname=None, debug=False):
     # tree = etree.parse(cachefname, parser)
     with tempfile.NamedTemporaryFile() as tmpfile:
         if debug:
-            print '    retrieving %s' % front_page_url
+            print('    retrieving %s' % front_page_url)
         try:
-            urllib.urlretrieve(front_page_url, tmpfile.name)
+            urllib.request.urlretrieve(front_page_url, tmpfile.name)
         except IOError as e:
-            print '    %s' % e
+            print('    %s' % e)
             return 'unknown'
         tree = etree.parse(tmpfile, parser)
     if cachefname is not None:  # write html to a file in case we want it later
         if debug:
-            print '    writing html to %s' % cachefname
+            print('    writing html to %s' % cachefname)
         tmpstr = etree.tostring(tree.getroot(), pretty_print=True, method='html')
-        with open(cachefname, 'w') as tmpfile:
+        with open(cachefname, 'wb') as tmpfile:
             tmpfile.write(tmpstr)
 
     tdlist = list(tree.findall('.//td'))
@@ -631,22 +631,22 @@ def get_status(modeltype, cachefname=None, debug=False):
     if st_text in ['complete', 'running']:
         return st_text
     elif 'to hour' in st_text or '1 1/3km to hr' in st_text:
-        print '  status: %s' % st_text
+        print('  status: %s' % st_text)
         return 'running'
-    print '  unknown status: \'%s\'' % st_text
+    print('  unknown status: \'%s\'' % st_text)
     return 'unknown'
 # ----------------------------------------------------------------------------------------
     run_time, status_time = get_run_status_times(tdlist[1])
     if debug:
-        print '       run time: %s ' % run_time
-        print '    status time: %s ' % status_time
+        print('       run time: %s ' % run_time)
+        print('    status time: %s ' % status_time)
     if len(tdlist) % 2 != 1:
         raise Exception('bad tdlist length %d' % len(tdlist))
     tdpairs = [(tdlist[i], tdlist[i + 1]) for i in range(1, len(tdlist), 2)]
     for nametd, statustd in tdpairs:
         hlink = nametd.find('.//a')
         if hlink.text == modeltype:
-            print '    %s: %s' % (hlink.text, statustd.text)
+            print('    %s: %s' % (hlink.text, statustd.text))
             if statustd.text == 'complete':
                 return 'complete'
             else:
@@ -667,20 +667,20 @@ def check_all_models_complete(debug=False):
     for mstr in model_strings:
         status = get_status(mstr, debug=debug)
         if debug:
-            print '  %s: %s' % (mstr, status)
+            print('  %s: %s' % (mstr, status))
 
         if status == 'running':
             return False
         elif status == 'unknown':
             cachefname = cachedir + '/%s-%s-status.html' % (mstr, datetime.datetime.now().__str__().replace(' ', '_'))
-            print '  unknown status for %s, writing html to %s' % (mstr, cachefname)
+            print('  unknown status for %s, writing html to %s' % (mstr, cachefname))
             status = get_status(mstr, cachefname=cachefname, debug=debug)
             return False
 
         statuses.append(status)
 
     if statuses.count('complete') != len(statuses):
-        print 'wtf? fell through, but not all statuses are \'complete\': %s' % statuses
+        print('wtf? fell through, but not all statuses are \'complete\': %s' % statuses)
         return False
 
     return True
@@ -694,7 +694,7 @@ def run():
             stuff_to_run.append(line)
 
     for line in stuff_to_run:
-        print line['domain'], line['variable']
+        print(line['domain'], line['variable'])
         if not args.no_download:  # if the images aren't there I think it will still try to download them one by one
             download_all_images(line['domain'], line['maptype'], line['variable'])
         write_html(line['domain'], line['maptype'], line['variable'])
@@ -725,7 +725,7 @@ if args.test:
 while True:
     all_complete = check_all_models_complete(debug=True)
     while not args.no_sleep and not all_complete:
-        print '  %s: forecasts are running, sleep for %d min' % (datetime.datetime.now().strftime('%a %B %d %H:%M'), int(running_sleep_time / 60.))
+        print('  %s: forecasts are running, sleep for %d min' % (datetime.datetime.now().strftime('%a %B %d %H:%M'), int(running_sleep_time / 60.)))
         time.sleep(running_sleep_time)
         all_complete = check_all_models_complete(debug=True)
 
@@ -734,8 +734,8 @@ while True:
     except:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         lines = traceback.format_exception(exc_type, exc_value, exc_traceback)
-        print ''.join(lines)
-        print '      failed to run (see above), continuing'
+        print(''.join(lines))
+        print('      failed to run (see above), continuing')
         if args.test or args.no_sleep:
             break
         else:
