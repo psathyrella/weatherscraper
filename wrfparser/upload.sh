@@ -6,12 +6,18 @@ if [ "$repodir" == "" ] || ! [ -d $repodir ]; then
     exit 1
 fi
 reponame=`basename $repodir`  # psathyrella.github.io
+if [ "$reponame" != "psathyrella.github.io" ]; then
+    echo "error: wrong repo name $reponame (should be psathyrella.github.io)"
+    exit 1
+fi
 
-echo "  pull/add/commit/push in $repodir"
-# TODO need to add the branch orphaning or whatever to this so it happens automatically every 100 commits or whatever (currently the .git dir just gets bigger and bigger, and is like 70GB after a year)
+echo "    pull/add/commit/push in $repodir"
+
+echo "    cd $repodir"
 cd $repodir
 
-git pull --quiet origin master
+echo "    pulling (log in pull.log)"
+git pull --quiet origin master >pull.log
 git checkout --orphan tmp-branch
 git add --all wrfparser/  # Add all files and commit them
 git commit --quiet -m "forecasts pushed on `date`"
