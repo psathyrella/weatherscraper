@@ -1,7 +1,7 @@
 #!/bin/bash
 
 reponame=psathyrella.github.io
-defbranch=display
+defbranch=master  # would be nice to change this, but it's being fiddly, and gh pages site might break
 
 repodir=`realpath $1`
 if [ "$repodir" == "" ] || ! [ -d $repodir ]; then

@@ -1,3 +1,7 @@
+# sudo apt install tesseract-ocr
+# python -m venv weather-env
+# source weather-env/bin/activate
+# pip install pytesseract lxml colored_traceback dateutils
 
 # weatherscraper:
 # while :; do ./upload-forecast.sh; sleep 6h; done
