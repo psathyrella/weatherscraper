@@ -291,9 +291,17 @@ def download_image(domain, maptype, variable, hour):
     try:
         urllib.request.urlretrieve(url, outfname)
         # check_call(['wget', '-O', outfname, url])
-    except CalledProcessError:
-        print('  failed retrieving %s' % url)
-        os.remove(outfname)
+    except urllib.error.HTTPError as err:
+        if err.code == 404:  # image just isn't published (e.g. snow products in summer) -- skip quietly
+            print('    missing (404), skipping %s' % url)
+        else:
+            print('    failed retrieving (HTTP %d) %s' % (err.code, url))
+        if os.path.exists(outfname):  # 404 may not have created the file
+            os.remove(outfname)
+    except urllib.error.URLError as err:  # network/DNS/connection problem
+        print('    failed retrieving (%s) %s' % (err.reason, url))
+        if os.path.exists(outfname):
+            os.remove(outfname)
 
 # ----------------------------------------------------------------------------------------
 def download_all_images(domain, maptype, variable):
