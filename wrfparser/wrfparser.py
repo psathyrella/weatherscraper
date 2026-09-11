@@ -28,6 +28,9 @@ front_page_url = 'https://atmos.washington.edu/wrfrt/data/run_status.html'
 wrfdir = os.path.dirname(os.path.realpath(__file__))
 dummy_image_path = wrfdir + '/woot.png'
 model_strings = ['WRF-GFS'] #, 'Extended WRF-GFS']
+max_checks_with_unchanged_status = 4  # once the forecasts have started the status text changes on every check, so this many unchanged checks means ~2h with no progress
+max_checks_not_yet_begun = 8  # 'not yet begun' is normally there for 3 checks (1.5h) before the forecasts start, and the 6h just_finished_sleep_time drifts by a couple min a day, so allow more of these before saying anything
+previous_status_text = {}  # modeltype : [last status text, number of checks in a row with that same text]
 
 titles = {
     '3-hour-precip' : 'precip in previous 3 hours',
@@ -636,11 +639,23 @@ def get_status(modeltype, cachefname=None, debug=False):
 # they changed the format, so hacking this on
     assert len(tdlist) == 2
     st_text = tdlist[1].text
+    if cachefname is None:  # only count on the first call for each check (the second call, which writes the html to a file, would double count)
+        if modeltype in previous_status_text and previous_status_text[modeltype][0] == st_text:
+            previous_status_text[modeltype][1] += 1
+        else:
+            previous_status_text[modeltype] = [st_text, 1]
+        n_unchanged = previous_status_text[modeltype][1]
+        max_unchanged = max_checks_not_yet_begun if st_text == 'not yet begun' else max_checks_with_unchanged_status
+        if n_unchanged >= max_unchanged and st_text != 'complete':  # 'complete' is never a problem, and anyway only gets checked every 6h (just_finished_sleep_time)
+            print('  %s !!! %s status \'%s\' unchanged for %d checks (%.1f hours): the forecasts have stopped making progress, and will probably never reach \'complete\'' % (datetime.datetime.now().strftime('%a %B %d %H:%M'), modeltype, st_text, n_unchanged, n_unchanged * running_sleep_time / 3600.))
     if st_text in ['complete', 'running']:
         return st_text
     elif 'to hour' in st_text or '1 1/3km to hr' in st_text:
         print('  status: %s' % st_text)
         return 'running'
+    elif st_text in ['not yet begun', 'finished 36/12/4, 1 1/3km not begun']:  # normal stages before a domain starts. exact matches on purpose: the 'finished 36/12, 4km to hr N' phrasing, where the 4km is listed separately and never moves into the 'finished 36/12/4' list, must keep falling through to 'unknown' so it gets cached (it means the 4km never finished, and the forecasts never reach 'complete')
+        print('  status: %s' % st_text)
+        return 'not begun'
     print('  unknown status: \'%s\'' % st_text)
     return 'unknown'
 # ----------------------------------------------------------------------------------------
@@ -677,7 +692,7 @@ def check_all_models_complete(debug=False):
         if debug:
             print('  %s: %s' % (mstr, status))
 
-        if status == 'running':
+        if status in ['running', 'not begun']:
             return False
         elif status == 'unknown':
             cachefname = cachedir + '/%s-%s-status.html' % (mstr, datetime.datetime.now().__str__().replace(' ', '_'))
@@ -725,6 +740,7 @@ args = parser.parse_args()
 
 running_sleep_time = 1800  # 1800s = 30m
 just_finished_sleep_time = 21600  # 21600s is 6h
+before_download_sleep_time = 900  # 900s = 15m. the site emits 'complete' before it has finished writing the images for the last forecast hour, so downloading immediately gets a stale last hour. measured Fri Sep 11 2026: 'complete' at 13:00, but the 1 1/3km hour-72 images were written up to 13:07, and 3 of the 4 uploaded ones were the pre-13:07 versions
 if args.test:
     args.no_sleep = True
     args.no_download = True
@@ -736,6 +752,10 @@ while True:
         print('  %s: forecasts are running, sleep for %d min' % (datetime.datetime.now().strftime('%a %B %d %H:%M'), int(running_sleep_time / 60.)))
         time.sleep(running_sleep_time)
         all_complete = check_all_models_complete(debug=True)
+
+    if not args.no_sleep:
+        print('  %s: forecasts complete, sleep for %d min so the last forecast hour\'s images are finished being written' % (datetime.datetime.now().strftime('%a %B %d %H:%M'), int(before_download_sleep_time / 60.)))
+        time.sleep(before_download_sleep_time)
 
     try:
         run()
