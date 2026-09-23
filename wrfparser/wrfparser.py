@@ -18,6 +18,7 @@ import colored_traceback.always
 import traceback
 from dateutil import tz
 import tempfile
+import shutil
 from collections import OrderedDict
 import traceback
 import ssl
@@ -26,7 +27,6 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 front_page_url = 'https://atmos.washington.edu/wrfrt/data/run_status.html'
 wrfdir = os.path.dirname(os.path.realpath(__file__))
-dummy_image_path = wrfdir + '/woot.png'
 model_strings = ['WRF-GFS'] #, 'Extended WRF-GFS']
 max_checks_with_unchanged_status = 4  # once the forecasts have started the status text changes on every check, so this many unchanged checks means ~2h with no progress
 max_checks_not_yet_begun = 8  # 'not yet begun' is normally there for 3 checks (1.5h) before the forecasts start, and the 6h just_finished_sleep_time drifts by a couple min a day, so allow more of these before saying anything
@@ -335,6 +335,9 @@ def join_image_pieces(subimages, maptype):
 
 # ----------------------------------------------------------------------------------------
 def get_single_date(img, fname):
+    # the init-time crop is only 400x22 of palette gif, and tesseract gets digits wrong on it: on 1.33km it read 'Init: 18 UTC Tue 32 Sep 26' where the image really says 12 UTC Tue 22 Sep 26 -- both the hour and the day wrong, and day 32 then threw in datetime() so this returned None and set_dates fell back to now() minus typical_hours_between_init_and_zero_fcast_hour, which put the write_html day breaks in the wrong places. grey plus 2x reads correctly on every domain and maptype; grey alone and 2x alone each still get it wrong
+    img = img.convert('L')
+    img = img.resize((img.size[0] * 2, img.size[1] * 2), Image.LANCZOS)
     try:
         datestr = str(pytesseract.image_to_string(img))
         # img.save(os.getenv('www') + '/tmp/tmp.png')
@@ -374,8 +377,10 @@ def set_dates(imgfo):
     # first find one date that we can get
     init_time = None
     for iimg in range(len(imgfo)):
-        if init_time is None:
-            init_time = get_single_date(imgfo[iimg]['subimages']['init-time'], imgfo[iimg]['fname'])
+        if imgfo[iimg]['dummy']:  # no date to read off a dummy image, and tesseract on all of them is slow and noisy
+            continue
+        init_time = get_single_date(imgfo[iimg]['subimages']['init-time'], imgfo[iimg]['fname'])
+        if init_time is not None:  # the break used to be unconditional, so only the first image was ever tried
             break
     if init_time is None:  # couldn't get it from any of the images
         init_time = datetime.datetime.now() - datetime.timedelta(hours=typical_hours_between_init_and_zero_fcast_hour)
@@ -399,17 +404,20 @@ def get_fcast_image_info(domain, maptype, variable, hour):
         print('  downloading %s' % fname)
         download_image(domain, maptype, variable, hour)
     margins = get_margins(maptype)
+    img = None
     if os.path.exists(fname):
         try:
             img = Image.open(fname)  # model snow is giving me invalid gifs... then again it's late july, so maybe that's on purpose
         except IOError as e:
             print('    %s' % e)
-            img = Image.open(dummy_image_path)
-        subimages = {sname : get_subimage(img, sname, margins) for sname in margins}
-        final_image = join_image_pieces(subimages, maptype)
-    else:
+            img = None
+    dummy = img is None  # whether this hour ended up as a dummy image rather than a real one: either download_image removed the file because it 404d, or it isn't a valid gif
+    if dummy:  # an invalid gif used to open a 450x340 placeholder image here instead, but the margins assume the 900x900 the site actually serves, so get_subimage()'s crop got right < left and the ValueError aborted the whole run() -- one bad gif took down every line in config.csv
         final_image = dummy_image()
         subimages = {sname : dummy_image() for sname in margins}
+    else:
+        subimages = {sname : get_subimage(img, sname, margins) for sname in margins}
+        final_image = join_image_pieces(subimages, maptype)
 
     # # print subimage sizes
     # for si in subimages:
@@ -426,7 +434,7 @@ def get_fcast_image_info(domain, maptype, variable, hour):
         os.makedirs(os.path.dirname(processed_fname))
     final_image.save(processed_fname)
 
-    return {'fcast-hour' : hour, 'fname' : processed_fname, 'subimages' : subimages}
+    return {'fcast-hour' : hour, 'fname' : processed_fname, 'subimages' : subimages, 'dummy' : dummy}
 
 # ----------------------------------------------------------------------------------------
 def join_fcasts(domain, maptype, variable):
@@ -544,9 +552,25 @@ def add_linkstrs(fname, all_fnames):
             htmlfile.write(line)
 
 # ----------------------------------------------------------------------------------------
+def remove_html_and_images(domain, maptype, variable):
+    htmlfname = args.outdir + '/' + get_htmlfname(domain, variable)
+    if os.path.exists(htmlfname):
+        print('      removing %s' % htmlfname)
+        os.remove(htmlfname)
+    for processed in (False, True):
+        imgdir = os.path.dirname(args.outdir + '/' + get_fname(domain, maptype, variable, 0, processed=processed))
+        if os.path.exists(imgdir):
+            print('      removing %s' % imgdir)
+            shutil.rmtree(imgdir)
+
+# ----------------------------------------------------------------------------------------
 def write_html(domain, maptype, variable):
     imgfo = join_fcasts(domain, maptype, variable)
     htmlfname = args.outdir + '/' + get_htmlfname(domain, variable)
+    if all(ifo['dummy'] for ifo in imgfo):  # the snow variables aren't published year round: in summer they come back as invalid gifs (and a variable that doesn't exist at all 404s), and either way every hour ends up a dummy image. leave the lines in config.csv and drop them here instead of commenting them out by hand
+        print('    no images for %s %s, so not writing its html' % (domain, variable))
+        remove_html_and_images(domain, maptype, variable)
+        return False
     # if not os.path.exists(os.path.dirname(htmlfname)):
     #     os.makedirs(os.path.dirname(htmlfname))
     with open(htmlfname, 'w') as htmlfile:
@@ -565,51 +589,7 @@ def write_html(domain, maptype, variable):
         htmlfile.write('<br>\n')
         htmlfile.write('<center><a href="' + get_legend_fname(maptype, variable) + '"><img src="' + get_legend_fname(maptype, variable) + '", width="' + ('500' if 'wind' in variable else '350') + '"></a></center>\n')
         htmlfile.write(htmlfooter)
-
-# ----------------------------------------------------------------------------------------
-def get_run_status_times(td):
-    if 'STATUS' not in td.text:
-        raise Exception('unexpected status line \'%s\'' % td.text)
-    txtlist = td.text.split()
-
-    if txtlist[:2] != ['STATUS', 'of']:
-        raise Exception('unexpected status line %s' % txtlist[:2])
-    run_time_str = txtlist[2]
-    if len(run_time_str) != 10:
-        raise Exception('couldn\'t convert run time %s' % run_time_str)
-    year = int(run_time_str[:4])  # NOTE used below for status time
-    month = int(run_time_str[4:6])
-    day = int(run_time_str[6:8])
-    hour = int(run_time_str[8:10])
-    run_time = datetime.datetime(year=year, month=month, day=day, hour=hour)  # initialization time, I think (probably utc)
-
-    if txtlist[3:7] != ['UW', 'runs', 'as', 'of']:
-        raise Exception('unexpected status line %s' % txtlist[3:7])
-
-    if len(txtlist) != 12:
-        raise Exception('unexpected status line %s' % txtlist[7:])
-    status_time_list = txtlist[7:12]
-    if len(status_time_list) != 5:
-        raise Exception('unexpected status time \'%s\'' % status_time_list)
-    hour, minute = [int(val) for val in status_time_list[0].split(':')]
-    ampm = status_time_list[1]
-    if ampm not in  ['am', 'pm']:
-        raise Exception('unexpected ampm \'%s\'' % ampm)
-    if hour == 12:
-        if ampm == 'am':  # not sure if they call 30min after midnight 12:30 or 00:30... but this should handle either
-            hour -= 12
-    else:
-        if ampm == 'pm':
-            hour += 12
-    tzstr = status_time_list[2]
-    if tzstr not in ['PDT', 'PST']:
-        raise Exception('unexpected time zone \'%s\'' % tzstr)
-    month_str = status_time_list[3]
-    month = int(list(calendar.month_abbr).index(month_str))
-    day = int(status_time_list[4])
-    status_time = datetime.datetime(year=year, month=month, day=day, hour=hour)  # time that it wrote this status file NOTE using year from run time above
-
-    return run_time, status_time
+    return True
 
 # ----------------------------------------------------------------------------------------
 def get_status(modeltype, cachefname=None, debug=False):
@@ -635,8 +615,7 @@ def get_status(modeltype, cachefname=None, debug=False):
             tmpfile.write(tmpstr)
 
     tdlist = list(tree.findall('.//td'))
-# ----------------------------------------------------------------------------------------
-# they changed the format, so hacking this on
+    # they changed the format of run_status.html, so this replaced the old parsing of a per-model table
     assert len(tdlist) == 2
     st_text = tdlist[1].text
     if cachefname is None:  # only count on the first call for each check (the second call, which writes the html to a file, would double count)
@@ -657,24 +636,6 @@ def get_status(modeltype, cachefname=None, debug=False):
         print('  status: %s' % st_text)
         return 'not begun'
     print('  unknown status: \'%s\'' % st_text)
-    return 'unknown'
-# ----------------------------------------------------------------------------------------
-    run_time, status_time = get_run_status_times(tdlist[1])
-    if debug:
-        print('       run time: %s ' % run_time)
-        print('    status time: %s ' % status_time)
-    if len(tdlist) % 2 != 1:
-        raise Exception('bad tdlist length %d' % len(tdlist))
-    tdpairs = [(tdlist[i], tdlist[i + 1]) for i in range(1, len(tdlist), 2)]
-    for nametd, statustd in tdpairs:
-        hlink = nametd.find('.//a')
-        if hlink.text == modeltype:
-            print('    %s: %s' % (hlink.text, statustd.text))
-            if statustd.text == 'complete':
-                return 'complete'
-            else:
-                return 'running'
-
     return 'unknown'
 
 # ----------------------------------------------------------------------------------------
@@ -716,14 +677,16 @@ def run():
         for line in reader:
             stuff_to_run.append(line)
 
+    written_lines = []  # the ones whose images are actually being published
     for line in stuff_to_run:
         print(line['domain'], line['variable'])
         if not args.no_download:  # if the images aren't there I think it will still try to download them one by one
             download_all_images(line['domain'], line['maptype'], line['variable'])
-        write_html(line['domain'], line['maptype'], line['variable'])
+        if write_html(line['domain'], line['maptype'], line['variable']):
+            written_lines.append(line)
 
-    htmlfnames = [get_htmlfname(line['domain'], line['variable']) for line in stuff_to_run]
-    for line in stuff_to_run:
+    htmlfnames = [get_htmlfname(line['domain'], line['variable']) for line in written_lines]
+    for line in written_lines:
         add_linkstrs(get_htmlfname(line['domain'], line['variable']), htmlfnames)
 
     write_index_html(args.outdir + '/index.html', htmlfnames)
