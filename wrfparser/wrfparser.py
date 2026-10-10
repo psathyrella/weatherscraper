@@ -19,6 +19,10 @@ import traceback
 from dateutil import tz
 import tempfile
 import shutil
+import re
+import base64
+import io
+from PIL import ImageDraw, ImageFont, ImageChops
 from collections import OrderedDict
 import traceback
 import ssl
@@ -67,7 +71,24 @@ def convert_dateinfo(dateinfo):
 def get_imonth(dateinfo):
     if dateinfo['month'] not in calendar.month_abbr:
         dateinfo['month'] = dateinfo['month'].replace('n]', 'y').replace('V', 'y')
-    return list(calendar.month_abbr).index(dateinfo['month'])
+    if dateinfo['month'] in calendar.month_abbr:
+        return list(calendar.month_abbr).index(dateinfo['month'])
+    # tesseract still misreads some months (it reads 'Oct' as 'Get' on 12km and 4km), and guessing from the letters is ambiguous ('Get' is as close to 'Sep' as to 'Oct'). but the init time is always within a day or so of now, so use whichever of this month and last month puts the day closest to today
+    now = datetime.datetime.now()
+    best = None
+    for imonth in (now.month, (now.month - 2) % 12 + 1):
+        year = now.year - (1 if imonth > now.month else 0)
+        try:
+            delta = abs(datetime.datetime(year, imonth, dateinfo['monthday']) - now)
+        except ValueError:  # e.g. day 31 in a 30 day month
+            continue
+        if best is None or delta < best[0]:
+            best = (delta, imonth, year)
+    if best is None:
+        raise Exception('couldn\'t read month \'%s\', and day %d doesn\'t fit this month or last' % (dateinfo['month'], dateinfo['monthday']))
+    print('    couldn\'t read month \'%s\', using %s (closest to today)' % (dateinfo['month'], calendar.month_abbr[best[1]]))
+    dateinfo['year'] = best[2]
+    return best[1]
 
 typical_hours_between_init_and_zero_fcast_hour = 4
 side_indices = {'left' : 0, 'right' : 1, 'top' : 2, 'bottom' : 3}
@@ -249,7 +270,92 @@ def get_url(domain, maptype, variable, hour):
     return base_url + '/images_' + domain_codes[domain] + '/' + maptype_codes[maptype] + variable_codes[variable] + '.' + ('%02d' % hour) + '.0000.gif'
 
 # ----------------------------------------------------------------------------------------
-def get_legend_fname(maptype, variable):
+# Each legend svg has the trimmed plot itself embedded in it as a png, with the single letters drawn on top, so a letter's
+# position in the svg maps to a pixel in the trimmed plot by scale and offset alone. Usually the embedded png is the whole
+# trimmed plot (its size is paste_sizes[maptype]); where instead it's only part of it, list it here with where that part
+# sits in the trimmed plot. Check the offset by matching the map's lines, not by size: a legend whose embedded png is
+# neither is skipped, since e.g. a 280x604 png in a western-washington legend turned out to be a washington-plus plot.
+legend_image_offsets = {  # (maptype, embedded png size) : (x, y) of that png within the trimmed plot
+    ('12km-domain', (300, 350)) : (0, 0),  # the top 350 rows of the 300x400 trimmed plot, date strip included. matching the borders and coastlines against current 12km plots puts it at (0, 0) with every line pixel on a line (at (0, 30) only 14% are)
+}
+letter_colour = (255, 0, 0)
+letter_outline_colour = (255, 255, 255)
+letter_size_on_page = 9  # font size in pixels as the html shows the plot, i.e. at width 150. the same for every plot, so each one gets font size 9 * (its width) / 150. the font sizes in the legend svgs are ignored, since they vary from 10px to 40px between legends (and between letters within one)
+letter_font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+legend_letter_cache = {}  # (domain, maptype, variable) : [(letter, x, y)] in trimmed-plot pixels
+
+# ----------------------------------------------------------------------------------------
+def get_svg_translate(el, svgtag):  # total translate from el up to <svg>; anything that isn't a plain translate makes this give up
+    dx, dy = 0., 0.
+    while el is not None and el.tag != svgtag:
+        tstr = el.get('transform')
+        if tstr is not None:
+            tmatch = re.fullmatch(r'translate\(([-\d.eE]+)[, ]+([-\d.eE]+)\)', tstr.strip())
+            if tmatch is None:
+                return None
+            dx += float(tmatch.group(1))
+            dy += float(tmatch.group(2))
+        el = el.getparent()
+    return dx, dy
+
+# ----------------------------------------------------------------------------------------
+def get_legend_letters(domain, maptype, variable):
+    # returns [(letter, x, y)] in trimmed-plot pixels, where x, y is the text origin the same way the svg draws it
+    # (default text-anchor, so x is the left edge and y the baseline), which puts each letter exactly where the legend shows it
+    if (domain, maptype, variable) in legend_letter_cache:
+        return legend_letter_cache[(domain, maptype, variable)]
+    svgfname = wrfdir + '/' + get_legend_fname(domain, maptype, variable)
+    svgtag, xlinktag = '{http://www.w3.org/2000/svg}%s', '{http://www.w3.org/1999/xlink}href'
+    root = etree.parse(svgfname).getroot()
+    letters = []
+    for imel in root.iter(svgtag % 'image'):
+        href = imel.get(xlinktag)
+        if href is None or ',' not in href:
+            continue
+        png = Image.open(io.BytesIO(base64.b64decode(href.split(',', 1)[1])))
+        if png.size == paste_sizes[maptype]:
+            xoff, yoff = 0, 0
+        elif (maptype, png.size) in legend_image_offsets:
+            xoff, yoff = legend_image_offsets[(maptype, png.size)]
+        else:
+            continue
+        imtranslate = get_svg_translate(imel, svgtag % 'svg')
+        if imtranslate is None:
+            continue
+        imx = float(imel.get('x', 0)) + imtranslate[0]  # inkscape leaves out x and y when they're 0
+        imy = float(imel.get('y', 0)) + imtranslate[1]
+        xscale = png.size[0] / float(imel.get('width'))
+        yscale = png.size[1] / float(imel.get('height'))
+        for txel in root.iter(svgtag % 'text'):
+            letter = ''.join(txel.itertext()).strip()
+            if len(letter) != 1:  # the rest of the text is the list saying what each letter means, e.g. 'a. squamish'
+                continue
+            txtranslate = get_svg_translate(txel, svgtag % 'svg')
+            if txtranslate is None:
+                continue
+            xpos = (float(txel.get('x')) + txtranslate[0] - imx) * xscale + xoff
+            ypos = (float(txel.get('y')) + txtranslate[1] - imy) * yscale + yoff
+            letters.append((letter, xpos, ypos))
+        break
+    if len(letters) == 0:
+        print('    no letters for %s %s %s from %s' % (domain, maptype, variable, os.path.basename(svgfname)))
+    legend_letter_cache[(domain, maptype, variable)] = letters
+    return letters
+
+# ----------------------------------------------------------------------------------------
+def draw_legend_letters(img, domain, maptype, variable):
+    drawer = ImageDraw.Draw(img)
+    fsize = int(round(letter_size_on_page * img.size[0] / 150.))
+    font = ImageFont.truetype(letter_font_path, fsize)
+    outline_width = max(1, int(round(fsize / 10.)))
+    for letter, xpos, ypos in get_legend_letters(domain, maptype, variable):
+        left, top, right, bottom = drawer.textbbox((xpos, ypos), letter, font=font, anchor='ls', stroke_width=outline_width)
+        if not (0 <= (left + right) / 2. < img.size[0] and 0 <= (top + bottom) / 2. < img.size[1]):  # the place is off this plot. moving the letter onto the plot would put it in the wrong place, so leave it off. a letter whose middle is on the plot gets drawn exactly where it is, even if that cuts part of it off at the edge
+            continue
+        drawer.text((xpos, ypos), letter, font=font, anchor='ls', fill=letter_colour, stroke_width=outline_width, stroke_fill=letter_outline_colour)
+
+# ----------------------------------------------------------------------------------------
+def get_legend_fname(domain, maptype, variable):
     if 'precip' in variable:  # this now also picks up 'snow-and-precip'
         variable_category = 'precip'
     elif 'snow' in variable:
@@ -265,6 +371,8 @@ def get_legend_fname(maptype, variable):
 
     legend_dir = 'legends/' + maptype  # *relative* path
     legendfname = variable_category + '.svg'
+    if os.path.exists(wrfdir + '/' + legend_dir + '/' + domain + '_' + legendfname):  # two domains can share a maptype but show different areas (4km and 1.33km pacific-northwest), so a legend can be specific to one domain
+        legendfname = domain + '_' + legendfname
     if not os.path.exists(args.outdir + '/' + legend_dir):
         os.makedirs(args.outdir + '/' + legend_dir)
     check_call(['cp', wrfdir + '/' + legend_dir + '/' + legendfname, args.outdir + '/' + legend_dir + '/' + legendfname])
@@ -418,6 +526,7 @@ def get_fcast_image_info(domain, maptype, variable, hour):
     else:
         subimages = {sname : get_subimage(img, sname, margins) for sname in margins}
         final_image = join_image_pieces(subimages, maptype)
+        draw_legend_letters(final_image, domain, maptype, variable)  # the letters the legend puts on the map, so you don't have to look down at it
 
     # # print subimage sizes
     # for si in subimages:
@@ -564,6 +673,54 @@ def remove_html_and_images(domain, maptype, variable):
             shutil.rmtree(imgdir)
 
 # ----------------------------------------------------------------------------------------
+# Each gif carries its own current colour scale, which we crop out and show above the legend rather than keeping copies
+# in the legend svgs, since those copies went stale: the bars that were in them were an old '.5 - 2048 cin' scale that
+# matched neither the current precip ('.005 - 10 in') nor snow ('.25 - 64 in') scales. Every gif has a 'Model Info'
+# line starting at row 867; 12km, 4km, and 1.33km pacific-northwest have the scale as horizontal bars between the bottom
+# of the map and that line, while 1.33km western-washington has a vertical bar down the right edge (and for some
+# variables a horizontal one at the bottom as well).
+model_info_row = 867
+right_scale_boxes = {  # (domain, maptype) : (left, top, right, bottom) of a vertical scale on the right edge. x 849 is the first column right of the map for all five 1.33km western-washington variables; rows 100-830 are below the date and above any bottom bar
+    ('1.33km', 'western-washington') : (849, 100, 900, 830),
+}
+
+# ----------------------------------------------------------------------------------------
+def get_bottom_scale_box(img):  # rows between the map and the 'Model Info' line, starting at the first bar; None if there's no bar there
+    def nonwhite_frac(row):
+        return sum(1 for x in range(img.size[0]) if min(img.getpixel((x, row))) < 230) / float(img.size[0])
+    row = 700
+    while row < model_info_row and nonwhite_frac(row) > 0.005:  # still in the map (anything at all in the row)
+        row += 1
+    while row < model_info_row and nonwhite_frac(row) <= 0.5:  # tick labels under the map, until the first bar
+        row += 1
+    if row >= model_info_row:
+        return None
+    box = (0, max(0, row - 2), img.size[0], model_info_row)  # starting further up picks up the map's tick labels, e.g. on 1.33km snow-and-precip, or the map itself on 4km wind, which ends 5 rows above its first bar
+    bbox = ImageChops.difference(img.crop(box), Image.new('RGB', (box[2] - box[0], box[3] - box[1]), (255, 255, 255))).getbbox()
+    return (max(0, bbox[0] - 3), box[1], min(img.size[0], bbox[2] + 3), box[3])
+
+# ----------------------------------------------------------------------------------------
+def write_scale_images(domain, maptype, variable):  # returns (relative path to the vertical scale or None, relative path to the horizontal scale or None)
+    img = None
+    for hour in expected_hours[domain][variable]:
+        try:
+            img = Image.open(args.outdir + '/' + get_fname(domain, maptype, variable, hour)).convert('RGB')
+            break
+        except IOError:
+            continue
+    if img is None:
+        return None, None
+    fnames = []
+    for name, box in (('scale-right', right_scale_boxes.get((domain, maptype))), ('scale-bottom', get_bottom_scale_box(img))):
+        if box is None:
+            fnames.append(None)
+            continue
+        fname = os.path.dirname(get_fname(domain, maptype, variable, 0, processed=True)) + '/' + name + '.png'
+        img.crop(box).save(args.outdir + '/' + fname)
+        fnames.append(fname)
+    return tuple(fnames)
+
+# ----------------------------------------------------------------------------------------
 def write_html(domain, maptype, variable):
     imgfo = join_fcasts(domain, maptype, variable)
     htmlfname = args.outdir + '/' + get_htmlfname(domain, variable)
@@ -587,7 +744,21 @@ def write_html(domain, maptype, variable):
             last_weekday = imgfo[ifn]['datetime'].weekday()
             htmlfile.write('<a href="' + get_fname(domain, maptype, variable, imgfo[ifn]['fcast-hour'], processed=False) + '"> <img alt="foop", src="' + get_fname(domain, maptype, variable, imgfo[ifn]['fcast-hour'], processed=True) + '", width="150"> </a>\n')
         htmlfile.write('<br>\n')
-        htmlfile.write('<center><a href="' + get_legend_fname(maptype, variable) + '"><img src="' + get_legend_fname(maptype, variable) + '", width="' + ('500' if 'wind' in variable else '350') + '"></a></center>\n')
+        legend_fname = get_legend_fname(domain, maptype, variable)
+        legend_width = 500 if 'wind' in variable else 350
+        right_scale, bottom_scale = write_scale_images(domain, maptype, variable)
+        if bottom_scale is not None:
+            htmlfile.write('<center><img src="' + bottom_scale + '"></center>\n')
+        htmlfile.write('<center>')
+        if right_scale is not None:  # same height as the legend next to it
+            legend_root = etree.parse(wrfdir + '/' + legend_fname).getroot()
+            if legend_root.get('viewBox') is not None:  # only the ratio matters, and width and height can be in e.g. mm
+                _, _, svg_width, svg_height = [float(v) for v in legend_root.get('viewBox').replace(',', ' ').split()]
+            else:
+                svg_width, svg_height = [float(re.match(r'[\d.]+', legend_root.get(k)).group(0)) for k in ('width', 'height')]
+            legend_height = int(legend_width * svg_height / svg_width)
+            htmlfile.write('<img src="' + right_scale + '", height="' + str(legend_height) + '"> ')
+        htmlfile.write('<a href="' + legend_fname + '"><img src="' + legend_fname + '", width="' + str(legend_width) + '"></a></center>\n')
         htmlfile.write(htmlfooter)
     return True
 
